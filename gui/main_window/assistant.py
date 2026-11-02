@@ -37,7 +37,7 @@ logger = get_logger(__name__)
 
 _ICONS = {".docx": "📄", ".xlsx": "📊", ".txt": "📝", ".md": "📝", ".pdf": "📕"}
 # results of actions, not answers from documents: no «Источники ответа» row under them
-_NO_SOURCE_ACTIONS = {"files", "app", "action_result", "command", "command_result", "chat"}
+_NO_SOURCE_ACTIONS = {"files", "app", "action_result", "command", "command_result", "chat", "code"}
 _KIND_ICONS = {"image": "🖼", "audio": "🎙", "document": "📄"}
 
 
@@ -148,7 +148,7 @@ class ChatKodiAssistantMixin:
             "Приложить файлы",
             str(Path.home()),
             "Документы и изображения (*.pdf *.docx *.doc *.rtf *.odt *.txt *.md *.xlsx *.xls *.csv *.pptx "
-            "*.html *.eml *.json *.jpg *.jpeg *.png *.bmp *.webp *.tif *.tiff *.wav *.mp3 *.ogg *.m4a);;Все файлы (*.*)",
+            "*.html *.py *.pyw *.js *.ts *.css *.sql *.eml *.json *.jpg *.jpeg *.png *.bmp *.webp *.tif *.tiff *.wav *.mp3 *.ogg *.m4a);;Все файлы (*.*)",
         )
         if files:
             self._attach_files(files)

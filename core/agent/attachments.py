@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Callable, List, Optional
 
 from core.agent import vision
+from core.agent.coding import SOURCE_EXTENSIONS, read_source
 from core.agent.table_check import check_tables
 from core.logging_utils import get_logger
 from core.paths import runtime_root
@@ -60,7 +61,7 @@ def kind_of(path: Path) -> str:
         return "image"
     if ext in AUDIO_EXTENSIONS:
         return "audio"
-    if ext in SUPPORTED_EXTENSIONS:
+    if ext in SUPPORTED_EXTENSIONS or ext in SOURCE_EXTENSIONS:
         return "document"
     return "other"
 
@@ -130,6 +131,9 @@ def read_attachment(attachment: Attachment, llm: Any, *, transcriber: Any = None
                     progress(f"Распознаю аудио «{attachment.name}»…")
                 attachment.text = transcriber.transcribe_file(attachment.path)
                 attachment.recognized = True
+        elif attachment.kind == "document" and attachment.path.suffix.lower() in SOURCE_EXTENSIONS:
+            # Source code must retain indentation, HTML tags and script bodies.
+            attachment.text = read_source(attachment.path)
         elif attachment.kind == "document":
             from core.documents.processor import read_file_text
 

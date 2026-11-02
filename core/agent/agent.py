@@ -31,7 +31,7 @@ from core.requirements import requirement_holds
 logger = get_logger(__name__)
 
 ACTIONS = ["answer", "transcribe", "summarize", "translate", "make_document", "compose", "schedule", "check", "grade", "compare",
-           "write", "files", "app", "command", "chat"]
+           "write", "code", "files", "app", "command", "chat"]
 SOURCES = ["attachments", "library", "both", "previous_answer", "none"]
 OUTPUTS = ["chat", "docx", "xlsx", "txt", "pptx"]
 
@@ -84,6 +84,8 @@ action:
   результаты тестов). Шкала записана в самом файле или в библиотеке;
 - compare — сравнить два документа или две редакции: что изменилось, чем отличаются;
 - write — написать новый текст: письмо, ответ на письмо, служебную записку, план, объявление;
+- code — написать, исправить или дополнить программу, скрипт, сайт, калькулятор или исходный код;
+  библиотека для программирования не нужна. «Добавь кнопку», «исправь ошибку» после кода — доработка того же проекта;
 - files — найти файл на компьютере (не в чате и не в библиотеке), открыть его, приложить к разговору, скопировать
   в библиотеку, переименовать, переместить или разложить файлы по папкам;
 - app — действие в другой программе: отправить или переслать что-то письмом, подготовить письмо в почте (Outlook)
@@ -233,7 +235,7 @@ PERSONA = (
     "принимать файлы, фото и сканы, распознавать их и переводить в электронный вид (Word, Excel); "
     "проверять данные на соответствие нормативам из библиотеки; составлять документы и презентации PowerPoint "
     "по образцам; "
-    "писать письма и служебные записки; пересказывать и переводить; находить файлы на компьютере, "
+    "писать письма и служебные записки; пересказывать и переводить; писать и дорабатывать код без библиотеки документов; находить файлы на компьютере, "
     "переименовывать и раскладывать их; готовить черновики писем в Outlook и открывать программы; выполнять "
     "команды на компьютере — то, что разрешено настройками, сам, остальное после подтверждения пользователя; "
     "составлять план, если задач несколько; помнить факты о пользователе между чатами. "
@@ -465,9 +467,9 @@ _DEMAND_PATTERNS = {
 # demand -> actions that deliver it, the phrase for «не сделано»
 _DEMAND_COVER = [
     ("grade", {"grade"}, "не выставил оценки по шкале"),
-    ("calc", {"answer", "grade", "check", "make_document", "compare"}, "не выполнил расчёт"),
-    ("check", {"check", "grade", "answer", "compare"}, "не выполнил проверку"),
-    ("fix", {"grade", "write", "make_document"}, "не исправил ошибки"),
+    ("calc", {"answer", "grade", "check", "make_document", "compare", "code"}, "не выполнил расчёт"),
+    ("check", {"check", "grade", "answer", "compare", "code"}, "не выполнил проверку"),
+    ("fix", {"grade", "write", "make_document", "code"}, "не исправил ошибки"),
     ("xlsx", set(), "не сохранил в Excel"),
     ("docx", set(), "не сохранил в Word"),
     ("pptx", set(), "не сделал презентацию"),
@@ -535,6 +537,9 @@ class Agent:
         self.allow_commands = bool(self.settings.commands)
         self._last_from_library = False
         self._last_action = ""
+        from core.agent.coding import CodeWorkspace
+
+        self._code_project = CodeWorkspace(self.store.root / "code_project")
 
     # ------------------------------------------------------------ helpers
 
@@ -714,6 +719,14 @@ class Agent:
     # ------------------------------------------------------------ routing
 
     def route(self, message: str, new_items: List[Attachment]) -> Dict[str, Any]:
+        from core.agent import coding
+
+        fresh_code = any(i.ok and i.path.suffix.lower() in coding.SOURCE_EXTENSIONS for i in new_items)
+        fresh_other = any(i.ok and i.path.suffix.lower() not in coding.SOURCE_EXTENSIONS for i in new_items)
+        active_code = self._code_project.active and self._last_action in {"", "code"} and not fresh_other
+        if coding.is_request(message, active=active_code, attached=fresh_code):
+            return dict(action="code", source="attachments" if fresh_code else "none", output="chat",
+                        language="", task=message, search_query="")
         lines = []
         if self.store.items:
             lines.append("Файлы в разговоре:")
@@ -782,6 +795,8 @@ class Agent:
         """The program keeps the route to what the user asked for: grades by a
         scale go to «grade», and «распознай и посчитай / проверь» is never just a
         recognition."""
+        if route["action"] == "code":
+            return dict(route, source="none", output="chat", steps=[])
         demands = _demands(message)
         pointed = self._points_at_file(message)
         for step in route.get("steps") or [route]:
@@ -883,6 +898,8 @@ class Agent:
 
     def _fix_route(self, route: Dict[str, Any], new_items: List[Attachment], previous: bool) -> Dict[str, Any]:
         """The program keeps a route consistent with what really exists."""
+        if route["action"] == "code":
+            return dict(route, source="none", output="chat")
         has_files = any(item.ok for item in self.store.items)
         if route["source"] in {"attachments", "both"} and not has_files:
             route["source"] = "library"
@@ -939,7 +956,7 @@ class Agent:
         "answer": "Ответ", "transcribe": "Распознавание", "summarize": "Краткое содержание", "translate": "Перевод",
         "make_document": "Документ по образцу", "compose": "Документ по разделам", "schedule": "Расписание",
         "check": "Проверка по нормативам", "grade": "Оценка по шкале", "compare": "Сравнение",
-        "write": "Текст", "files": "Файлы", "app": "Действие в программе", "command": "Команда",
+        "code": "Код", "write": "Текст", "files": "Файлы", "app": "Действие в программе", "command": "Команда",
     }
 
     def _run_plan(self, message: str, route: Dict[str, Any], new_items: List[Attachment], say,
@@ -1057,7 +1074,7 @@ class Agent:
         "grade": "выставил оценки по шкале", "compose": "написал документ по разделам", "schedule": "составил расписание",
         "compare": "сравнил документы", "write": "написал текст", "inspect": "разобрал присланный файл",
         "chat": "поговорил", "command": "предложил команду", "files": "нашёл файлы", "app": "подготовил действие в программе",
-        "plan": "выполнил план из нескольких шагов",
+        "code": "подготовил исходный код", "plan": "выполнил план из нескольких шагов",
     }
 
     def _unfinished(self, message: str, result: "AgentResult") -> str:
@@ -1113,7 +1130,7 @@ class Agent:
         """What the assistant can really do in this conversation (for the suggestions)."""
         library = self._document_count() > 0
         files = len([i for i in self.store.items if i.ok])
-        parts = ["ответить на вопросы по файлу" if files else "", "ответить по документам библиотеки" if library else "",
+        parts = ["писать и дорабатывать исходный код без библиотеки", "ответить на вопросы по файлу" if files else "", "ответить по документам библиотеки" if library else "",
                  "проверить по нормативам библиотеки" if library and files else "",
                  "составить документ по образцу из библиотеки" if library else "",
                  "сравнить два приложенных документа" if files >= 2 else "",
@@ -1146,6 +1163,13 @@ class Agent:
     def _without_llm(self, message: str, new_items: List[Attachment]) -> AgentResult:
         for item in new_items:
             read_attachment(item, None)
+        from core.agent import coding
+
+        if coding.is_request(message, active=self._code_project.active,
+                             attached=any(i.path.suffix.lower() in coding.SOURCE_EXTENSIONS for i in new_items)):
+            return AgentResult("Для создания и изменения кода нужна загруженная локальная модель. "
+                               "Проверьте модель в лаунчере и журнал её загрузки. Библиотека документов для этой задачи не требуется.",
+                               action="code", incomplete="локальная модель не загружена")
         if message:
             return AgentResult(self.manager.process_message(message), action="answer")
         names = ", ".join(i.name for i in new_items)
@@ -2095,6 +2119,41 @@ class Agent:
             self.history.append(("[подтверждено выполнение команд]", text))
         result = AgentResult(text, action="command_result")
         return self._continue_plan(result, progress) if record else result
+
+    def _do_code(self, message, route, new_items, say) -> AgentResult:
+        from core.agent import coding
+
+        project = self._code_project
+        try:
+            files = project.snapshot()
+            attached = [i for i in new_items if i.ok and i.path.suffix.lower() in coding.SOURCE_EXTENSIONS]
+            if not attached and not files:
+                attached = [i for i in self.store.items if i.ok and i.path.suffix.lower() in coding.SOURCE_EXTENSIONS]
+            for item in attached:
+                if not coding.valid_name(item.name):
+                    raise ValueError("Имя исходного файла не поддерживается: используйте простое имя с расширением.")
+                files[item.name] = coding.read_source(item.path)
+            if sum(len(c) for c in files.values()) > 40000:
+                raise ValueError("Проект слишком большой для текущего режима. Создайте новый чат и приложите только файлы, которые нужно доработать.")
+            say("Дорабатываю последнюю версию кода…" if files else "Пишу программу…")
+            payload = self._json(coding.PROMPT.format(
+                message=message, files=json.dumps(files, ensure_ascii=False) if files else "[проект ещё не создан]",
+                history="\n".join(project.requests) or "[нет]",
+            ), coding.SCHEMA, max_tokens=6000)
+            summary = str(payload.get("summary") or "").strip()
+            if not payload.get("files") and summary:
+                return AgentResult(summary, action="code", incomplete="модель не вернула изменённые файлы")
+            files.update(project.changes(payload))
+            paths = project.save(files, message)
+        except (ValueError, OSError, UnicodeError) as exc:
+            return AgentResult(f"Код не сохранён: {exc}. Предыдущая версия проекта сохранена.",
+                               action="code", incomplete=str(exc))
+        body = (summary + "\n\n" if summary else "") + f"Версия проекта: {project.revision}. Код сохранён, автоматически не запускался."
+        for name, text in files.items():
+            body += f"\n\n**{name}**\n````{Path(name).suffix.lstrip('.')}\n{text}\n````"
+        return AgentResult(body, action="code", content=body,
+                           files=[OutputFile(path, "Исходный код") for path in paths.values()],
+                           sources=[i.name for i in attached])
 
     def _do_chat(self, message, route, new_items, say) -> AgentResult:
         system = "\n\n".join(part for part in (PERSONA, self._system()) if part)
