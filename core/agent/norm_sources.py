@@ -53,3 +53,33 @@ def read_library(docs, llm, progress, cache):
             if path.suffix.lower() == ".pdf":
                 issues.append(f"{label}: исходный PDF недоступен, проверен только найденный фрагмент")
     return sources, issues
+
+
+def recover_image_norms(items, required, llm, progress):
+    """Only accept a repeated OCR read when exercise IDs and all pairs agree."""
+    from core.agent import vision, fitness
+    if not getattr(llm, 'supports_vision', False):
+        return [], []
+    sources, issues = [], []
+    prompt = ('Дословно прочитай таблицу перевода результатов упражнений в баллы. '
+              'Обязательно перепиши полный заголовок с номером упражнения. '
+              'Все пары «количество раз / баллы», включая повторяющиеся столбцы, оформи Markdown-таблицей. '
+              'Сохрани все строки. Ничего не рассчитывай, не исправляй и не угадывай. Нечитаемое обозначь [?].')
+    for item in items:
+        if item.kind != 'image' or not item.path.is_file():
+            continue
+        progress(f'Перепроверяю номер упражнения и таблицу нормативов «{item.name}»…')
+        readings = []
+        for data in (item.path.read_bytes(), vision._contrast(item.path.read_bytes())):
+            raw = vision.clean_transcription(vision.ask_image(llm, data, prompt, max_tokens=6000, max_side=3000, upscale=True))
+            maps, _, conflicts = fitness.standards([(item.name, raw)])
+            readings.append((raw, maps, conflicts))
+        a, b = readings
+        if a[1] and a[1] == b[1] and not a[2] and not b[2] and set(a[1]) & required:
+            sources.append((item.name, a[0]))
+            item.text, item.doubts = a[0], []
+            if item._persist:
+                item._persist()
+        else:
+            issues.append(f'{item.name}: номер упражнения или пары нормативов не совпали при повторном распознавании; таблица не использована')
+    return sources, issues

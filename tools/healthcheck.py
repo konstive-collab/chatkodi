@@ -44,7 +44,6 @@ def _check_project_files() -> Dict[str, Any]:
         required = [
             root / "ChatKodiApp.exe",
             root / "ChatKodiLauncher.exe",
-            root / "chatkodi_config.json",
             root / "manuals",
         ]
     else:
@@ -53,7 +52,6 @@ def _check_project_files() -> Dict[str, Any]:
             root / "core" / "search.py",
             root / "core" / "chat_mode.py",
             root / "gui" / "app.py",
-            root / "chatkodi_config.json",
         ]
     missing = [str(p.relative_to(root)) for p in required if not p.exists()]
     return {"ok": not missing, "root": str(root), "missing": missing}

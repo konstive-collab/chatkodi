@@ -1260,6 +1260,12 @@ class ChatKodiMessagesMixin:
             self.current_streaming_worker = None
 
     def _cancel_streaming(self) -> None:
+        agent_worker = getattr(self, "_agent_worker", None)
+        if agent_worker is not None and agent_worker.isRunning():
+            self.stop_btn.setEnabled(False)
+            self.status.showMessage("Останавливаю работу с файлами; сохранённые версии останутся доступны…")
+            agent_worker.cancel()
+            return
         worker = getattr(self, "current_streaming_worker", None)
         if worker is None or not worker.isRunning():
             return

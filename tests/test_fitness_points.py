@@ -101,12 +101,12 @@ def test_multirow_merged_excel_headers_and_exact_points(tmp_path, monkeypatch):
     assert "результат 51 отсутствует" in result.text
     assert "нет результатов упражнений" in result.text
     book = load_workbook(result.files[0].path)
-    assert book["Нормативы"].max_row == 110
-    assert "VLOOKUP" in book["Ведомость"]["H2"].value
-    assert "FALSE" in book["Ведомость"]["H2"].value
-    assert 'F2&""="1"' in book["Ведомость"]["H2"].value
-    assert "COUNT(H2,K2)" in book["Ведомость"]["L2"].value
-    assert book["Ведомость"]["M2"].value is None  # no invented final rating
+    assert book["Нормативы ChatKodi"].max_row == 110
+    assert "VLOOKUP" in book["Sheet"]["H5"].value
+    assert "FALSE" in book["Sheet"]["H5"].value
+    assert 'F5&""="1"' in book["Sheet"]["H5"].value
+    assert "COUNT(H5,K5)" in book["Sheet"]["L5"].value
+    assert book["Sheet"]["M5"].value is None  # no invented final rating
     book.close()
 
 

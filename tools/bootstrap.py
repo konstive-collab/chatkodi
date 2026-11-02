@@ -78,6 +78,14 @@ def main() -> int:
             delegated_args = ['--install-requirements']
         return _delegate_to_venv(root, delegated_args)
 
+    # ZIP distributions intentionally exclude the user's personal config.
+    # Materialize defaults only when no user configuration exists.
+    config = root / 'chatkodi_config.json'
+    if not config.exists():
+        from core.config import DEFAULT_CONFIG
+        from core.atomic_io import atomic_write_json
+        atomic_write_json(config, DEFAULT_CONFIG)
+
     report = build_doctor_report()
     doctor = report.get('doctor', {})
 

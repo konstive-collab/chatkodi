@@ -763,12 +763,9 @@ def run_launcher() -> int:
 
             commands.append([_python_executable(), "-m", "tools.bootstrap", "--install-requirements", "--requirements", req_file])
 
-            # Модели качаем только если чего-то реально не хватает. Это убирает
-            # лишние сетевые проверки при каждом автозапуске и ускоряет повторные старты.
-            if not bool(models.get("embeddings")) or not bool(models.get("llm")):
-                commands.append([_python_executable(), "download_models.py"])
-            else:
-                commands.append([_python_executable(), "download_models.py", "--check"])
+            # The current installer reuses valid GGUF files and also prepares
+            # mmproj and llama-server, not merely model directories.
+            commands.append([_python_executable(), "download_models.py"])
             commands.append([_python_executable(), "-m", "tools.doctor"])
             return commands
 

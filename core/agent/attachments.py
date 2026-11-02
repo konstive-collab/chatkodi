@@ -8,6 +8,8 @@ scans with the vision model — and then lives in the conversation context.
 from __future__ import annotations
 
 import datetime as dt
+import json
+from dataclasses import asdict
 import re
 import shutil
 import time
@@ -17,6 +19,7 @@ from pathlib import Path
 from typing import Any, Callable, List, Optional
 
 from core.agent import vision
+from core.agent.cancellation import TaskCancelled
 from core.agent.coding import SOURCE_EXTENSIONS, read_source
 from core.agent.table_check import check_tables
 from core.logging_utils import get_logger
@@ -43,6 +46,8 @@ class Attachment:
     recognized: bool = False  # text came from the vision model, not from a text layer
     read: bool = False
     doubts: List[Any] = field(default_factory=list)  # vision.CellDoubt: numbers the model was unsure of
+
+    _persist: Any = field(default=None, repr=False, compare=False)
 
     @property
     def ok(self) -> bool:
@@ -74,8 +79,68 @@ class AttachmentStore:
     """Attachments of one chat session."""
 
     def __init__(self, root: Optional[Path] = None):
-        self.root = root or (runtime_root() / "attachments" / time.strftime("%Y%m%d_%H%M%S"))
+        self.root = Path(root) if root is not None else (runtime_root() / "attachments" / time.strftime("%Y%m%d_%H%M%S"))
         self.items: List[Attachment] = []
+        self.restore_error = ""
+        self._load()
+
+    def _load(self):
+        index = self.root / "attachments.json"
+        if not index.is_file():
+            # Earlier releases copied files but kept their index only in RAM.
+            # Recover owned copies so an application update does not empty chats.
+            if self.root.is_dir():
+                for path in sorted(self.root.iterdir()):
+                    match = re.fullmatch(r"([0-9a-f]{8})_(.+)", path.name)
+                    if path.is_file() and match and is_supported(path):
+                        item = Attachment(id=match[1], name=match[2], path=path, kind=kind_of(path))
+                        item._persist = self.save
+                        self.items.append(item)
+                if self.items:
+                    self.save()
+            return
+        try:
+            try:
+                records = json.loads(index.read_text(encoding="utf-8"))
+            except (ValueError, OSError):
+                records = json.loads(index.with_suffix('.json.bak').read_text(encoding='utf-8'))
+                self.restore_error = "Вложения восстановлены из резервной копии состояния."
+            loaded = []
+            for record in records:
+                path = (self.root / record.pop("file")).resolve()
+                cache = (self.root / record.pop("cache")).resolve()
+                if not path.is_relative_to(self.root.resolve()) or not cache.is_relative_to(self.root.resolve()) or not path.is_file():
+                    raise ValueError("Файл вложения недоступен")
+                text = cache.read_text(encoding="utf-8") if cache.is_file() else ""
+                raw_doubts = record.pop("doubts", [])
+                item = Attachment(path=path, text=text, **record)
+                item.doubts = [vision.CellDoubt(**d) for d in raw_doubts]
+                item._persist = self.save
+                item._saved_text = text
+                if not text:
+                    item.read = False
+                loaded.append(item)
+            self.items = loaded
+        except (ValueError, OSError, TypeError, KeyError) as exc:
+            self.restore_error = "Не все вложения чата восстановлены: " + str(exc)
+
+    def save(self):
+        from core.atomic_io import atomic_write_json
+
+        self.root.mkdir(parents=True, exist_ok=True)
+        records = []
+        for item in self.items:
+            if not item.path.is_relative_to(self.root):
+                continue  # only owned copies are persisted, never external paths
+            cache = self.root / f"{item.id}.text.txt"
+            if not cache.is_file() or getattr(item, "_saved_text", None) != item.text:
+                cache.write_text(item.text, encoding="utf-8")
+                item._saved_text = item.text
+            records.append(dict(id=item.id, name=item.name, file=str(item.path.relative_to(self.root)),
+                                cache=cache.name, kind=item.kind, error=item.error, pages=item.pages,
+                                seconds=item.seconds, checks=item.checks, recognized=item.recognized,
+                                read=item.read, doubts=[asdict(d) for d in item.doubts]))
+        atomic_write_json(self.root / "attachments.json", records)
 
     def add(self, source: Path) -> Attachment:
         source = Path(source)
@@ -84,7 +149,9 @@ class AttachmentStore:
         target = self.root / f"{att_id}_{source.name}"
         shutil.copy2(source, target)
         attachment = Attachment(id=att_id, name=source.name, path=target, kind=kind_of(source))
+        attachment._persist = self.save
         self.items.append(attachment)
+        self.save()
         return attachment
 
     def add_bytes(self, data: bytes, name: str) -> Attachment:
@@ -93,7 +160,9 @@ class AttachmentStore:
         target = self.root / f"{att_id}_{name}"
         target.write_bytes(data)
         attachment = Attachment(id=att_id, name=name, path=target, kind=kind_of(target))
+        attachment._persist = self.save
         self.items.append(attachment)
+        self.save()
         return attachment
 
     def get(self, att_id: str) -> Optional[Attachment]:
@@ -101,16 +170,19 @@ class AttachmentStore:
 
     def remove(self, att_id: str) -> None:
         self.items = [a for a in self.items if a.id != att_id]
+        self.save()
 
     def clear(self) -> None:
         self.items = []
+        self.save()
 
 
 def read_attachment(attachment: Attachment, llm: Any, *, transcriber: Any = None,
                     progress: Optional[Callable[[str], None]] = None) -> Attachment:
     """Fill ``attachment.text`` (once)."""
-    if attachment.read:
+    if attachment.read and not attachment.error:
         return attachment
+    attachment.error = ""
     started = time.perf_counter()
     try:
         if attachment.kind == "image":
@@ -155,6 +227,8 @@ def read_attachment(attachment: Attachment, llm: Any, *, transcriber: Any = None
                 attachment.error = "Не удалось извлечь текст из файла."
         else:
             attachment.error = "Этот тип файла не поддерживается."
+    except TaskCancelled:
+        raise
     except Exception as exc:
         logger.exception("Attachment %s could not be read", attachment.name)
         attachment.error = f"Не удалось прочитать файл: {exc}"
@@ -165,6 +239,8 @@ def read_attachment(attachment: Attachment, llm: Any, *, transcriber: Any = None
         "Attachment read: name=%s kind=%s chars=%s recognized=%s seconds=%.1f error=%s",
         attachment.name, attachment.kind, len(attachment.text), attachment.recognized, attachment.seconds, attachment.error or "-",
     )
+    if attachment._persist is not None:
+        attachment._persist()
     return attachment
 
 

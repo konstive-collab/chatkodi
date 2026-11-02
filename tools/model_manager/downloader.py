@@ -1500,113 +1500,9 @@ def get_offline_mode() -> bool:
 
 # Функция для командной строки
 def main():
-    """Точка входа для командной строки."""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='Умный загрузчик моделей с автовыбором')
-    parser.add_argument('--offline', action='store_true', 
-                       help='Только оффлайн режим (не качать из интернета)')
-    parser.add_argument('--force', action='store_true',
-                       help='Принудительная перезагрузка всех моделей')
-    parser.add_argument('--check', action='store_true',
-                       help='Только проверка доступности моделей')
-    parser.add_argument('--list', action='store_true',
-                       help='Показать локальные модели')
-    parser.add_argument('--cleanup', action='store_true',
-                       help='Очистить поврежденные модели')
-    parser.add_argument('--repair', action='store_true',
-                       help='Попытаться починить поврежденные модели')
-    parser.add_argument('--manual', action='store_true',
-                       help='Ручной выбор модели (без автовыбора)')
-    
-    args = parser.parse_args()
-    
-    if args.check:
-        availability = check_models_availability()
-        print("\n📊 СТАТУС МОДЕЛЕЙ:")
-        print(f"   Эмбеддинги: {'✅' if availability['embeddings'] else '❌'}")
-        print(f"   LLM: {'✅' if availability['llm'] else '❌'}")
-        
-        if availability['llm_path']:
-            print(f"   LLM путь: {availability['llm_path']}")
-        if availability['llm_name']:
-            print(f"   LLM имя: {availability['llm_name']}")
-        if availability['llm_size']:
-            print(f"   LLM размер: {availability['llm_size']}")
-        
-        print(f"   Уровень системы: {availability['system_tier'].upper()}")
-        print(f"   CUDA: {'✅ Доступна' if availability['has_cuda'] else '❌ Недоступна'}")
-        
-        if availability['all_models']:
-            print(f"\n📁 ВСЕ ЛОКАЛЬНЫЕ МОДЕЛИ:")
-            for model in availability['all_models']:
-                print(f"   • {model}")
-        
-        if availability['embeddings'] and availability['llm']:
-            print("\n✅ Все модели доступны, можно работать оффлайн")
-            sys.exit(0)
-        else:
-            print("\n❌ Не все модели доступны")
-            sys.exit(1)
-    
-    elif args.list:
-        downloader = SmartModelDownloader()
-        local_models = downloader.get_all_local_models()
-        
-        if local_models:
-            print(f"\n📁 ЛОКАЛЬНЫЕ МОДЕЛИ ({len(local_models)}):")
-            for path, info in local_models.items():
-                name = info["name"]
-                model_type = info["type"]
-                size = info["size_gb"]
-                valid = info["valid"]
-                reason = info["reason"]
-                
-                status = "✅" if valid else "❌"
-                print(f"\n   {status} {name} ({model_type})")
-                print(f"     Путь: {path}")
-                print(f"     Размер: {size:.1f} GB")
-                print(f"     Статус: {'рабочая' if valid else 'повреждена'}")
-                if not valid:
-                    print(f"     Причина: {reason}")
-        else:
-            print("📭 Локальных моделей нет")
-            print(f"   Запустите: python {__file__}")
-    
-    elif args.cleanup:
-        downloader = SmartModelDownloader()
-        downloader.cleanup_broken_models()
-    
-    elif args.repair:
-        downloader = SmartModelDownloader()
-        
-        # Пробуем починить все модели по приоритету
-        model_priority = [
-            "Qwen/Qwen3-4B-Instruct-2507",
-            "Qwen/Qwen2.5-1.5B-Instruct", 
-            "Qwen/Qwen2.5-0.5B-Instruct",
-            "Qwen/Qwen2-1.5B-Instruct",
-            "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-        ]
-        
-        repaired = False
-        for model_name in model_priority:
-            if downloader.repair_model(model_name):
-                repaired = True
-                break
-        
-        if not repaired:
-            print("❌ Не удалось починить ни одну модель")
-            sys.exit(1)
-    
-    else:
-        # Основная загрузка
-        if args.manual:
-            # Ручной выбор
-            download_all_models(offline_mode=args.offline, force=args.force, auto_select=False)
-        else:
-            # Автоматический выбор (по умолчанию)
-            download_all_models(offline_mode=args.offline, force=args.force, auto_select=True)
+    """Use the GGUF setup matching the current llama.cpp backend."""
+    from tools.model_manager.gguf_setup import main as setup_main
+    return setup_main()
 
 
 if __name__ == "__main__":
@@ -1622,4 +1518,4 @@ if __name__ == "__main__":
         import sys
         sys.modules['psutil'] = None
     
-    main()
+    raise SystemExit(main())

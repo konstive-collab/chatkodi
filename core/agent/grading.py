@@ -227,17 +227,26 @@ def is_results_source(text: str) -> bool:
 
 
 def _person_header(header: List[str]) -> bool:
-    return any(re.search(r"нагрудн|№\s*упражнен|фио|ф\.?\s*и\.?\s*о\.?|фамили|студент|участник|спортсмен|full name|student|athlete", h, re.I)
+    return any(re.search(r"нагрудн|фио|ф\.?\s*и\.?\s*о\.?|фамили|студент|участник|спортсмен|full name|student|athlete", h, re.I)
                for h in header)
 
 
 def pick_table(sources: Sequence[Tuple[str, str]]) -> Tuple[Optional[Table], str, str]:
-    """The largest table of the sources: (table, its source name, its source text)."""
-    best: Tuple[Optional[Table], str, str] = (None, "", "")
+    """Prefer actual result rows; never merge identically headed Excel sheets."""
+    def rank(table):
+        from core.agent.fitness import groups, active_results
+        slots = groups(table)
+        person = _person_header(table.header)
+        active = active_results(table) if slots else 0
+        eligible = person or len(slots) > 1
+        return (bool(active and eligible), person, len(slots) > 1, active if eligible else 0, len(table.rows))
+    best = (None, "", "")
     for name, text in sources:
-        for table in _merge_tables(parse_markdown_tables(text)):
-            if best[0] is None or (_person_header(table.header), len(table.rows)) > (_person_header(best[0].header), len(best[0].rows)):
-                best = (table, name, text)
+        sections = re.split(r"(?m)(?=^## Лист «)", text)
+        for section in sections:
+            for table in _merge_tables(parse_markdown_tables(section)):
+                if best[0] is None or rank(table) > rank(best[0]):
+                    best = (table, name, section)
     return best
 
 

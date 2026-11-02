@@ -84,13 +84,13 @@ def test_real_excel_and_word_uploads_are_used_together(tmp_path, monkeypatch, up
     assert "Иванов Иван Иванович: Бег 1000 м: 3:50 → «4»" in result.text
     assert "Петров Петр Петрович: Подтягивания: 8 → «4»" in result.text
     book = load_workbook(result.files[0].path)
-    sheet = book["Ведомость"]
+    sheet = book["Sheet"]
     assert "*86400" in sheet["D2"].value
     assert "*86400" not in sheet["D3"].value  # repetitions are not time fractions
     assert 'B2="Бег 1000 м"' in sheet["D2"].value
     assert sheet["D4"].value == '="нет шкалы"'
     assert "нет данных" in sheet["D5"].value
-    assert "standards.docx" in str(list(book["Шкала"].values))
+    assert "standards.docx" in str(list(book["Нормативы ChatKodi"].values))
     book.close()
 
 

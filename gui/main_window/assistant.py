@@ -37,7 +37,7 @@ logger = get_logger(__name__)
 
 _ICONS = {".docx": "📄", ".xlsx": "📊", ".txt": "📝", ".md": "📝", ".pdf": "📕"}
 # results of actions, not answers from documents: no «Источники ответа» row under them
-_NO_SOURCE_ACTIONS = {"files", "app", "action_result", "command", "command_result", "chat", "code"}
+_NO_SOURCE_ACTIONS = {"files", "app", "action_result", "command", "command_result", "chat", "code", "edit_document", "cancelled"}
 _KIND_ICONS = {"image": "🖼", "audio": "🎙", "document": "📄"}
 
 
@@ -224,6 +224,8 @@ class ChatKodiAssistantMixin:
         self._run_send_anim()
         self.send_btn.setEnabled(False)
         self.send_btn.setText("Думаю…")
+        self.stop_btn.setEnabled(True)
+        self.stop_btn.setVisible(True)
         if hasattr(self, "_ensure_llm_ready"):
             try:
                 self._ensure_llm_ready(eager=True, reprobe=True)
@@ -271,6 +273,8 @@ class ChatKodiAssistantMixin:
                 pass
 
     def _on_agent_failed(self, message: str) -> None:
+        self.stop_btn.setVisible(False)
+        self.stop_btn.setEnabled(True)
         trail = getattr(self, "_trail", None)
         self._trail = None
         if trail is not None:
@@ -284,6 +288,8 @@ class ChatKodiAssistantMixin:
     # ------------------------------------------------------------ result
 
     def _on_agent_result(self, result) -> None:
+        self.stop_btn.setVisible(False)
+        self.stop_btn.setEnabled(True)
         from core.agent.agent import attachment_outcome
 
         self._hide_typing_indicator()
@@ -348,7 +354,8 @@ class ChatKodiAssistantMixin:
         self.status.showMessage(f"Готово за {result.seconds:.1f} с")
         if getattr(self, "voice_reply_enabled", False) and hasattr(self, "_speak_text"):
             self._speak_text(result.content or result.text)
-        self._suggest_next_steps(bubble, turn_text, result)
+        if result.action not in {"grade", "edit_document", "cancelled"}:
+            self._suggest_next_steps(bubble, turn_text, result)
 
     # ------------------------------------------------------------ next steps
 

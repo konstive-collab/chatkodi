@@ -20,6 +20,38 @@ class PDFReading:
     issues: list[str] = field(default_factory=list)
 
 
+def _vertical_cell(page, bbox, raw):
+    """Some PDFs place upright glyphs vertically without rotation metadata.
+
+    Recover reading direction from the actual glyph coordinates and content
+    order, rather than reversing a mixed two-column text string.
+    """
+    if not raw or raw.count('\n') < 2 or bbox is None:
+        return raw
+    x0, top, x1, bottom = bbox
+    chars = [c for c in page.chars if x0 <= (c['x0'] + c['x1']) / 2 <= x1
+             and top <= (c['top'] + c['bottom']) / 2 <= bottom and c['text'].strip()]
+    if len(chars) < 3:
+        return raw
+    columns = []
+    for char in sorted(chars, key=lambda c: c['x0']):
+        if not columns or abs(columns[-1][0] - char['x0']) > 1.5:
+            columns.append((char['x0'], []))
+        columns[-1][1].append(char)
+    if len(columns) > 5 or max(len(c) for _, c in columns) < 3:
+        return raw
+    heights = [abs(c['bottom'] - c['top']) for c in chars]
+    if max(c['top'] for c in chars) - min(c['top'] for c in chars) < 2 * min(heights):
+        return raw
+    words = []
+    for _, column in columns:
+        original = [c for c in chars if c in column]
+        steps = [b['top'] - a['top'] for a, b in zip(original, original[1:]) if abs(b['top'] - a['top']) > 1]
+        reverse = sum(steps) < 0
+        words.append(''.join(c['text'] for c in sorted(column, key=lambda c: c['top'], reverse=reverse)))
+    return ' '.join(words)
+
+
 def _page_markdown(page) -> str:
     from core.agent.attachments import _cell, _markdown_block, _fitness_header
 
@@ -47,7 +79,9 @@ def _page_markdown(page) -> str:
     for top, line in lines:
         events.append((top, min(w["x0"] for w in line), " ".join(w["text"] for w in sorted(line, key=lambda w: w["x0"]))))
     for table in tables:
-        rows = [[_cell(c) for c in row] for row in table.extract()]
+        extracted = table.extract()
+        rows = [[_cell(_vertical_cell(page, table.rows[ri].cells[ci], value))
+                 for ci, value in enumerate(row)] for ri, row in enumerate(extracted)]
         rows = [row for row in rows if any(row)]
         prefix = []
         while len(rows) > 1 and sum(bool(c) for c in rows[0]) == 1:

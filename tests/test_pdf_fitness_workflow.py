@@ -181,3 +181,20 @@ def test_results_with_units_stay_numeric_in_generated_workbook(tmp_path):
     book = load_workbook(path)
     assert book["Ведомость"]["C2"].value == 20
     book.close()
+
+
+def test_vertical_upright_pdf_glyphs_are_read_in_their_actual_direction(tmp_path):
+    pdfmetrics.registerFont(TTFont('OnestTest', str(Path(__file__).parents[1] / 'assets/fonts/Onest-Regular.ttf')))
+    path = tmp_path / 'vertical.pdf'
+    doc = canvas.Canvas(str(path)); doc.setFont('OnestTest', 9)
+    doc.drawString(30, 720, TITLE)
+    for x in [30,90,150]: doc.line(x,550,x,700)
+    for y in [550,575,600,700]: doc.line(30,y,150,y)
+    for word,x,start in [('Количество',43,608),('раз',59,635),('Баллы',112,625)]:
+        for i,char in enumerate(word): doc.drawString(x,start+i*7,char)
+    for y,result,score in [(583,'20','40'),(558,'25','50')]:
+        doc.drawString(45,y,result);doc.drawString(110,y,score)
+    doc.save()
+    reading = read_pdf(path)
+    maps,_,_=fitness.standards([(path.name,reading.text)])
+    assert maps['1'] == {20:40,25:50}

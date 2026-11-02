@@ -35,6 +35,15 @@ def find_llama_server() -> Optional[Path]:
     roots = [project_root() / "llama.cpp"]
     if getattr(sys, "frozen", False):
         roots.insert(0, Path(sys.executable).resolve().parent / "llama.cpp")
+    for base in model_cache_search_dirs():
+        managed = base / "llama.cpp" / "managed"
+        try:
+            manifest = json.loads((managed / "current.json").read_text(encoding="utf-8"))
+            selected = (managed / manifest["executable"]).resolve()
+            if selected.is_relative_to(managed.resolve()) and selected.is_file():
+                return selected
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
     roots += [base / "llama.cpp" for base in model_cache_search_dirs()]
     for root in roots:
         if not root.is_dir():

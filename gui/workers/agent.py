@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import List
 
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -21,14 +22,30 @@ class AgentWorker(QThread):
         self.agent = agent
         self.message = message
         self.files = list(files)
+        self.cancel_event = threading.Event()
+
+    def cancel(self):
+        self.cancel_event.set()
+        model = getattr(self.agent.manager, "llm_model", None)
+        cancel = getattr(model, "cancel_generation", None)
+        if cancel:
+            cancel()
 
     def run(self) -> None:
+        model = getattr(self.agent.manager, "llm_model", None)
+        attach = getattr(model, "attach_generation_cancel_event", None)
+        detach = getattr(model, "detach_generation_cancel_event", None)
+        if attach:
+            attach(self.cancel_event)
         try:
-            result = self.agent.handle(self.message, self.files, progress=self.progress.emit)
+            result = self.agent.handle(self.message, self.files, progress=self.progress.emit, cancel_event=self.cancel_event)
             self.finished_ok.emit(result)
         except Exception as exc:
             logger.exception("Assistant turn failed")
             self.failed.emit(str(exc))
+        finally:
+            if detach:
+                detach(self.cancel_event)
 
 
 class CommandWorker(QThread):

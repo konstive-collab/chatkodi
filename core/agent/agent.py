@@ -31,7 +31,7 @@ from core.requirements import requirement_holds
 logger = get_logger(__name__)
 
 ACTIONS = ["answer", "transcribe", "summarize", "translate", "make_document", "compose", "schedule", "check", "grade", "compare",
-           "write", "code", "files", "app", "command", "chat"]
+           "write", "code", "edit_document", "files", "app", "command", "chat"]
 SOURCES = ["attachments", "library", "both", "previous_answer", "none"]
 OUTPUTS = ["chat", "docx", "xlsx", "txt", "pptx"]
 
@@ -84,6 +84,8 @@ action:
   результаты тестов). Шкала записана в самом файле или в библиотеке;
 - compare — сравнить два документа или две редакции: что изменилось, чем отличаются;
 - write — написать новый текст: письмо, ответ на письмо, служебную записку, план, объявление;
+- edit_document — заполнить, исправить, доработать или перевести уже приложенный либо активный Excel, Word или PowerPoint;
+  изменять последнюю версию файла, сохраняя его оформление;
 - code — написать, исправить или дополнить программу, скрипт, сайт, калькулятор или исходный код;
   библиотека для программирования не нужна. «Добавь кнопку», «исправь ошибку» после кода — доработка того же проекта;
 - files — найти файл на компьютере (не в чате и не в библиотеке), открыть его, приложить к разговору, скопировать
@@ -468,8 +470,8 @@ _DEMAND_PATTERNS = {
 _DEMAND_COVER = [
     ("grade", {"grade"}, "не выставил оценки по шкале"),
     ("calc", {"answer", "grade", "check", "make_document", "compare", "code"}, "не выполнил расчёт"),
-    ("check", {"check", "grade", "answer", "compare", "code"}, "не выполнил проверку"),
-    ("fix", {"grade", "write", "make_document", "code"}, "не исправил ошибки"),
+    ("check", {"check", "grade", "answer", "compare", "code", "edit_document"}, "не выполнил проверку"),
+    ("fix", {"grade", "write", "make_document", "code", "edit_document"}, "не исправил ошибки"),
     ("xlsx", set(), "не сохранил в Excel"),
     ("docx", set(), "не сохранил в Word"),
     ("pptx", set(), "не сделал презентацию"),
@@ -540,6 +542,9 @@ class Agent:
         from core.agent.coding import CodeWorkspace
 
         self._code_project = CodeWorkspace(self.store.root / "code_project")
+        from core.agent.document_workspace import DocumentWorkspace
+
+        self._documents = DocumentWorkspace(self.store.root / "documents")
 
     # ------------------------------------------------------------ helpers
 
@@ -723,10 +728,23 @@ class Agent:
 
         fresh_code = any(i.ok and i.path.suffix.lower() in coding.SOURCE_EXTENSIONS for i in new_items)
         fresh_other = any(i.ok and i.path.suffix.lower() not in coding.SOURCE_EXTENSIONS for i in new_items)
-        active_code = self._code_project.active and self._last_action in {"", "code"} and not fresh_other
+        code_state = self._code_project.root / "current.json"
+        doc_state = self._documents.root / "current.json"
+        latest_is_code = not doc_state.exists() or (code_state.exists() and code_state.stat().st_mtime_ns > doc_state.stat().st_mtime_ns)
+        active_code = self._code_project.active and (self._last_action == "code" or (not self._last_action and latest_is_code)) and not fresh_other
         if coding.is_request(message, active=active_code, attached=fresh_code):
             return dict(action="code", source="attachments" if fresh_code else "none", output="chat",
                         language="", task=message, search_query="")
+        from core.agent import document_editing, fitness
+        from core.agent.office_documents import EXTENSIONS
+
+        fresh_office = [i for i in new_items if i.ok and i.path.suffix.lower() in EXTENSIONS]
+        fitness_tables = [t for i in self.store.items if i.ok for t in parse_markdown_tables(i.text) if fitness.groups(t)]
+        fresh_fitness = any(i in new_items and any(fitness.groups(t) for t in parse_markdown_tables(i.text)) for i in self.store.items if i.ok)
+        if fitness_tables and re.search(r"заполн|постав.*балл|простав.*балл|рассчита.*балл|пересчита", message, re.I) and (fresh_fitness or (not self._documents.active and not fresh_office)):
+            return dict(action="grade", source="attachments", output="xlsx", task=message, search_query="", language="")
+        if document_editing.requested(message, active=bool(self._documents.active), attached=bool(fresh_office)) and (self._documents.active or fresh_office):
+            return dict(action="edit_document", source="attachments", output="chat", task=message, search_query="", language="")
         lines = []
         if self.store.items:
             lines.append("Файлы в разговоре:")
@@ -795,7 +813,7 @@ class Agent:
         """The program keeps the route to what the user asked for: grades by a
         scale go to «grade», and «распознай и посчитай / проверь» is never just a
         recognition."""
-        if route["action"] == "code":
+        if route["action"] in {"code", "edit_document"}:
             return dict(route, source="none", output="chat", steps=[])
         demands = _demands(message)
         pointed = self._points_at_file(message)
@@ -898,7 +916,7 @@ class Agent:
 
     def _fix_route(self, route: Dict[str, Any], new_items: List[Attachment], previous: bool) -> Dict[str, Any]:
         """The program keeps a route consistent with what really exists."""
-        if route["action"] == "code":
+        if route["action"] in {"code", "edit_document"}:
             return dict(route, source="none", output="chat")
         has_files = any(item.ok for item in self.store.items)
         if route["source"] in {"attachments", "both"} and not has_files:
@@ -956,7 +974,7 @@ class Agent:
         "answer": "Ответ", "transcribe": "Распознавание", "summarize": "Краткое содержание", "translate": "Перевод",
         "make_document": "Документ по образцу", "compose": "Документ по разделам", "schedule": "Расписание",
         "check": "Проверка по нормативам", "grade": "Оценка по шкале", "compare": "Сравнение",
-        "code": "Код", "write": "Текст", "files": "Файлы", "app": "Действие в программе", "command": "Команда",
+        "edit_document": "Правки документа", "code": "Код", "write": "Текст", "files": "Файлы", "app": "Действие в программе", "command": "Команда",
     }
 
     def _run_plan(self, message: str, route: Dict[str, Any], new_items: List[Attachment], say,
@@ -1018,7 +1036,40 @@ class Agent:
 
     # ------------------------------------------------------------ entry point
 
-    def handle(self, message: str, new_files: Optional[List[Path]] = None,
+    def handle(self, message: str, new_files=None, progress=None, cancel_event=None) -> AgentResult:
+        import threading
+        from core.agent.cancellation import TaskCancelled
+
+        self._cancel_event = cancel_event if cancel_event is not None else threading.Event()
+        def checked_progress(text):
+            self._check_cancel()
+            if progress:
+                progress(text)
+        try:
+            self._check_cancel()
+            result = self._handle_impl(message, new_files, progress=checked_progress)
+            self._check_cancel()
+            if self.store.restore_error:
+                result.text += "\n\n" + self.store.restore_error
+            if self._documents.error:
+                result.text += "\n\n" + self._documents.error
+            return result
+        except TaskCancelled:
+            files = []
+            if self._documents.active:
+                try:
+                    files = [OutputFile(self._documents.path(), "Последняя сохранённая версия")]
+                except ValueError:
+                    pass
+            return AgentResult("Работа остановлена. Последняя подтверждённая версия сохранена; незавершённые правки не применены.",
+                               action="cancelled", files=files, incomplete="остановлено пользователем")
+
+    def _check_cancel(self):
+        from core.agent.cancellation import TaskCancelled
+        if getattr(self, "_cancel_event", None) is not None and self._cancel_event.is_set():
+            raise TaskCancelled()
+
+    def _handle_impl(self, message: str, new_files: Optional[List[Path]] = None,
                progress: Optional[Callable[[str], None]] = None) -> AgentResult:
         started = time.perf_counter()
         say = progress or (lambda _text: None)
@@ -1029,10 +1080,11 @@ class Agent:
         if new_items:
             self._grade_changes = ("", [])  # corrections belonged to the previous sheet
         if not self._llm_ready():
+            self._no_model_progress = say
             result = self._without_llm(message, new_items)
             result.seconds = time.perf_counter() - started
             return result
-        for item in new_items:
+        for item in new_items + [i for i in self.store.items if (not i.read or (i.error and not i.ok)) and i not in new_items]:
             read_attachment(item, self.llm, transcriber=self.transcriber, progress=say)
 
         small_talk = None
@@ -1060,6 +1112,12 @@ class Agent:
                 result.incomplete = result.incomplete or note
         result.seconds = time.perf_counter() - started
         result.attachments = new_items + [a for a in result.attachments if a not in new_items]
+        from core.agent.office_documents import EXTENSIONS
+        if result.action not in {"grade", "edit_document", "code"}:
+            for output in result.files:
+                if output.path.suffix.lower() in EXTENSIONS:
+                    self._documents.register(output.name, output.path, key="output:" + str(output.path), action=result.action)
+                    output.markdown = ""
         if result.files:
             self._recent_files = [str(f.path) for f in result.files]
         self._last_from_library = bool(result.route.get("source") == "library" and result.action in {"answer", "summarize"})
@@ -1074,7 +1132,7 @@ class Agent:
         "grade": "выставил оценки по шкале", "compose": "написал документ по разделам", "schedule": "составил расписание",
         "compare": "сравнил документы", "write": "написал текст", "inspect": "разобрал присланный файл",
         "chat": "поговорил", "command": "предложил команду", "files": "нашёл файлы", "app": "подготовил действие в программе",
-        "code": "подготовил исходный код", "plan": "выполнил план из нескольких шагов",
+        "edit_document": "доработал документ", "code": "подготовил исходный код", "plan": "выполнил план из нескольких шагов",
     }
 
     def _unfinished(self, message: str, result: "AgentResult") -> str:
@@ -1161,8 +1219,8 @@ class Agent:
             return 0
 
     def _without_llm(self, message: str, new_items: List[Attachment]) -> AgentResult:
-        for item in new_items:
-            read_attachment(item, None)
+        for item in new_items + [i for i in self.store.items if (not i.read or (i.error and not i.ok)) and i not in new_items]:
+            read_attachment(item, None, progress=getattr(self, "_no_model_progress", None))
         from core.agent import coding
 
         if coding.is_request(message, active=self._code_project.active,
@@ -1170,6 +1228,17 @@ class Agent:
             return AgentResult("Для создания и изменения кода нужна загруженная локальная модель. "
                                "Проверьте модель в лаунчере и журнал её загрузки. Библиотека документов для этой задачи не требуется.",
                                action="code", incomplete="локальная модель не загружена")
+        from core.agent import fitness, document_editing
+        from core.agent.office_documents import EXTENSIONS
+        has_fitness = any(fitness.groups(t) for i in self.store.items if i.ok for t in parse_markdown_tables(i.text))
+        if has_fitness and re.search(r"заполн|балл|пересчита", message, re.I):
+            return self._do_grade(message, dict(source="attachments", output="xlsx", task=message, search_query="", language=""),
+                                  new_items, getattr(self, "_no_model_progress", None) or (lambda _: None))
+        if document_editing.requested(message, active=bool(self._documents.active),
+                attached=any(i.path.suffix.lower() in EXTENSIONS for i in new_items)):
+            return AgentResult("Для интерпретации произвольных правок нужна загруженная локальная модель. "
+                               "Исходный документ и сохранённые версии доступны; библиотека не заменяет модель редактирования.",
+                               action="edit_document", incomplete="локальная модель не загружена")
         if message:
             return AgentResult(self.manager.process_message(message), action="answer")
         names = ", ".join(i.name for i in new_items)
@@ -1700,6 +1769,17 @@ class Agent:
         # Grading needs both the data and norms, including earlier chat uploads.
         items = [] if route["source"] == "previous_answer" else [i for i in self.store.items if i.ok]
         items += [i for i in new_items if i.ok and i not in items]
+        from core.agent.attachments import _tables_as_markdown
+        active_record = self._documents.active
+        fresh_results = any(i.ok and grading.is_results_source(i.text) for i in new_items)
+        use_active = bool(active_record and active_record.get("action") == "grade" and not fresh_results)
+        if use_active:
+            from core.agent import vision
+            latest = self._documents.path()
+            current = Attachment(id="active:" + active_record["id"], name=active_record["name"], path=latest,
+                                 kind="document", text=_tables_as_markdown(latest), read=True,
+                                 doubts=[vision.CellDoubt(**d) for d in active_record.get("doubts", [])])
+            items = [i for i in items if i.name != current.name] + [current]
         sources = [(i.name, i.text) for i in items] or [("предыдущий ответ", self._previous_answer())]
         # Prefer a newly uploaded results sheet; a norms-only upload must not
         # displace the results already present in the conversation.
@@ -1723,11 +1803,30 @@ class Agent:
             say("Сопоставляю номера упражнений с таблицами перевода результатов в баллы…")
             from core.agent.norm_sources import select_named, read_library
 
-            norms_sources, selection_issue = select_named(sources, message)
-            required = {fitness._id(row[g.exercise]) for row in table.rows for g in fitness.groups(table)
-                        if g.exercise < len(row) and row[g.exercise].strip()}
+            sheet_item = next((i for i in items if i.name == table_source), None)
+            from core.agent.workbook_template import fitness_tables
+            book_tables = fitness_tables(sheet_item.path) if sheet_item and sheet_item.path.suffix.lower() in {".xlsx", ".xlsm"} and sheet_item.path.is_file() else []
+            if not fitness.active_results(table) and not book_tables:
+                return AgentResult("Не найдены исходные результаты упражнений на листах книги. "
+                    "Сводный лист без результатов не используется для расчёта. Проверьте листы групп; если результаты заданы формулами, "
+                    "пересчитайте книгу в Excel (Ctrl+Alt+F9) и сохраните её. Пустой файл как заполненный не выдаётся.",
+                    action="grade", incomplete="не найдены исходные результаты")
+            retained_norms = self._documents.norms() if use_active and not new_items else []
+            fresh_norms = [(i.name, i.text) for i in new_items if i.ok and i is not sheet_item and
+                           (i.kind == "image" or i.path.suffix.lower() == ".pdf" or fitness.standards([(i.name, i.text)])[0])]
+            norms_sources, selection_issue = select_named(fresh_norms or retained_norms or sources, message)
+            required = {fitness._id(row[g.exercise]) for t in ([t for _, t in book_tables] or [table])
+                        for row in t.rows for g in fitness.groups(t) if g.exercise < len(row) and row[g.exercise].strip()}
             maps, _used, _conflicts = fitness.standards(norms_sources)
             issues = [f"{i.name}: {i.error}" for i in items if i.error and any(n == i.name for n, _ in norms_sources)]
+            if not required.issubset(maps) and not selection_issue:
+                from core.agent.norm_sources import recover_image_norms
+                repaired, image_issues = recover_image_norms([i for i in items if i is not sheet_item], required - set(maps), self.llm, say)
+                issues += image_issues
+                if repaired:
+                    repaired_names = {n for n, _ in repaired}
+                    norms_sources = [(n, t) for n, t in norms_sources if n not in repaired_names] + repaired
+                    maps, _used, _conflicts = fitness.standards(norms_sources)
             if not required.issubset(maps) or selection_issue:
                 queries = [route["search_query"], message] + [
                     f"таблица перевода результата упражнения № {ex} в баллы" for ex in sorted(required)]
@@ -1739,21 +1838,53 @@ class Agent:
                 cache = getattr(self, "_norm_pdf_cache", {})
                 extra, read_issues = read_library(docs, self.llm, say, cache)
                 self._norm_pdf_cache = cache
-                norms_sources, selection_issue = select_named(sources + extra, message)
+                known_names = {n for n, _ in norms_sources}
+                combined = norms_sources + [(n, t) for n, t in sources if n not in known_names] + extra
+                norms_sources, selection_issue = select_named(combined, message)
                 issues += read_issues
             if selection_issue:
                 issues.append(selection_issue)
             norms_sources += [("сообщение", message)]
+            maps, _used, _conflicts = fitness.standards(norms_sources)
+            if not maps:
+                details = "\n" + "\n".join(issues) if issues else ""
+                return AgentResult("Баллы не проставлены: не найдены проверенные таблицы нормативов для упражнений " +
+                    ", ".join(sorted(required)) + ". Нужны читаемый номер упражнения и пары «результат — баллы» на каждой фотографии. "
+                    "Файл не выдаётся как заполненный." + details, action="grade", incomplete="не найдены проверенные нормативы")
             from core.agent.outputs import outputs_dir, safe_name, unique_path
 
             path = unique_path(outputs_dir(), safe_name(f"{Path(table_source).stem} — баллы", ".xlsx"))
             sheet_item = next((i for i in items if i.name == table_source), None)
-            body, used, incomplete = fitness.calculate(table, norms_sources, path,
-                                                       doubts=sheet_item.doubts if sheet_item else ())
+            from core.agent.office_documents import EXTENSIONS
+            native_template = None
+            if sheet_item and sheet_item.path.suffix.lower() in {".xlsx", ".xlsm"} and sheet_item.path.is_file():
+                if not use_active:
+                    self._documents.register(sheet_item.name, sheet_item.path, key=sheet_item.id, action="grade")
+                native_template = self._documents.path()
+                expected = self._documents.active["digest"]
+                path, revision = self._documents.next_path()
+            if native_template is not None:
+                from core.agent.workbook_template import calculate_book
+                body, used, incomplete = calculate_book(native_template, norms_sources, path,
+                    doubts=sheet_item.doubts if sheet_item else (), cancel_event=getattr(self, "_cancel_event", None), progress=say)
+            else:
+                body, used, incomplete = fitness.calculate(table, norms_sources, path,
+                    doubts=sheet_item.doubts if sheet_item else (), cancel_event=getattr(self, "_cancel_event", None))
+            if native_template is not None:
+                from dataclasses import asdict
+                self._check_cancel()
+                self._documents.commit(path, revision, message[:300], action="grade", expected=expected)
+                self._documents.active["doubts"] = [asdict(d) for d in (sheet_item.doubts if sheet_item else [])]
+                self._documents.remember_norms([(n, t) for n, t in norms_sources if n != "сообщение"])
+                body += f"\n\nВерсия документа: {revision}. Оформление исходной книги сохранено."
+            else:
+                self._documents.register(path.name, path, key="generated:" + str(path), action="grade")
+                self._documents.remember_norms([(n, t) for n, t in norms_sources if n != "сообщение"])
+                body += "\n\nТаблица восстановлена по распознанному тексту; точное оформление фото не гарантируется."
             if issues:
                 body += "\n\nНе полностью проверенные источники:\n" + "\n".join(f"- {issue}" for issue in dict.fromkeys(issues))
             result = AgentResult(body, action="grade", content=body,
-                                 files=[OutputFile(path, "Таблица Excel с расчётом баллов", body)],
+                                 files=[OutputFile(path, "Ведомость: итоговые данные неполные" if incomplete else "Ведомость с сохранением оформления")],
                                  sources=list(dict.fromkeys([table_source] + used)), incomplete=incomplete)
             if route["output"] in {"docx", "txt"}:
                 result = self._maybe_file(result, route, title="Расчёт баллов")
@@ -1839,7 +1970,19 @@ class Agent:
         title = f"{Path(table_source).stem} — оценки"
         path = grading.write_workbook(table, layout, rules, results, unique_path(outputs_dir(), safe_name(title, ".xlsx")),
                                       changes, doubts)
-        files = [OutputFile(path, "Таблица Excel с формулами", body)]
+        if item and item.path.suffix.lower() in {".xlsx", ".xlsm"} and item.path.is_file():
+            from core.agent.workbook_template import preserve_calculation
+
+            self._documents.register(item.name, item.path, key=item.id, action="grade")
+            template = self._documents.path()
+            target, revision = self._documents.next_path()
+            preserve_calculation(template, path, table, target, editable_columns=(layout.result, layout.grade))
+            self._documents.commit(target, revision, message[:300], action="grade")
+            path = target
+            body += f"\n\nВерсия документа: {revision}. Оформление исходной книги сохранено."
+            files = [OutputFile(path, "Ведомость с сохранением оформления")]
+        else:
+            files = [OutputFile(path, "Таблица Excel с формулами", body)]
         result = AgentResult(body, action="grade", files=files, sources=list(dict.fromkeys([table_source] + rules.sources)), content=body)
         if route["output"] in {"docx", "txt"}:
             result = self._maybe_file(result, route, title=title)
@@ -2120,6 +2263,157 @@ class Agent:
         result = AgentResult(text, action="command_result")
         return self._continue_plan(result, progress) if record else result
 
+    def _do_edit_document(self, message, route, new_items, say) -> AgentResult:
+        from core.agent import document_editing
+        from core.agent.office_documents import EXTENSIONS, OfficeFile
+
+        workspace = self._documents
+        try:
+            selected_attachment = None
+            if route.get("target_id"):
+                workspace.state["active"] = route["target_id"]
+                workspace.save()
+            elif not new_items:
+                known = [r for r in workspace.state["documents"].values() if r["name"].casefold() in message.casefold()]
+                if len(known) == 1:
+                    workspace.state["active"] = known[0]["id"]
+                    workspace.save()
+                elif len(known) > 1 and not re.search(r"все|всех", message, re.I):
+                    raise ValueError("В запросе несколько рабочих файлов: укажите, в каком внести правки")
+                if not known:
+                    named = [i for i in self.store.items if i.path.suffix.lower() in EXTENSIONS and i.name.casefold() in message.casefold()]
+                    if len(named) == 1:
+                        selected_attachment = named[0]
+                    elif len(named) > 1:
+                        raise ValueError("Укажите, в каком из названных файлов применить правки")
+            candidates = [i for i in new_items if i.ok and i.path.suffix.lower() in EXTENSIONS]
+            if selected_attachment is not None:
+                candidates = [selected_attachment]
+            batch = bool(re.search(r"все\s+(?:эти\s+)?(?:файл|документ|таблиц|презентаци)|всех\s+(?:файл|документ|таблиц)", message, re.I))
+            if batch and not route.get("batch_step"):
+                jobs = [(None, i) for i in candidates] if candidates else [(r["id"], None) for r in workspace.state["documents"].values()]
+                if len(jobs) > 1:
+                    results = []
+                    for doc_id, item in jobs:
+                        say("Обрабатываю файл " + (item.name if item else workspace.state["documents"][doc_id]["name"]))
+                        step = dict(route, batch_step=True, target_id=doc_id)
+                        results.append(self._do_edit_document(message, step, [item] if item else [], say))
+                    return AgentResult("\n\n".join(r.text for r in results), action="edit_document",
+                        files=[f for r in results for f in r.files],
+                        incomplete="; ".join(r.incomplete for r in results if r.incomplete))
+            if not candidates and not workspace.active:
+                candidates = [i for i in self.store.items if i.ok and i.path.suffix.lower() in EXTENSIONS]
+            if len(candidates) > 1:
+                named = [i for i in candidates if i.name.casefold() in message.casefold()]
+                if len(named) != 1:
+                    raise ValueError("Укажите имя файла для правки: " + ", ".join(i.name for i in candidates))
+                candidates = named
+            if candidates:
+                item = candidates[0]
+                workspace.register(item.name, item.path, key=item.id)
+            if not workspace.active:
+                raise ValueError("Приложите рабочий Excel, Word или PowerPoint")
+            if re.search(r"(?:покажи|выдай|сохрани).*(?:последн|текущ|актуальн).*верси", message, re.I):
+                return AgentResult(f"Актуальная версия: {workspace.active['revision']}.", action="edit_document",
+                                   files=[OutputFile(workspace.path(), "Последняя сохранённая версия")])
+            undo, number = document_editing.rollback_request(message)
+            if undo:
+                path = workspace.rollback(number)
+                return AgentResult("Восстановлена предыдущая версия документа; история правок сохранена.", action="edit_document",
+                                   files=[OutputFile(path, "Восстановленная версия")])
+            record = workspace.active
+            if record.get("action") == "grade" and not re.search(r"\d", message) and re.search(r"идеал|пересчита|проверь", message, re.I):
+                return self._do_grade(message, dict(route, source="attachments", output="xlsx", search_query=""), [], say)
+            source = workspace.path()
+            expected = record["digest"]
+            evidence_items = [i for i in self.store.items if i.ok and i.name != record["name"]]
+            retry, count, all_changes = "", 0, []
+            refined = bool(re.search(r"идеал|пока.*(?:готов|правильн)|проверь.*доработ|все.*ошиб", message, re.I))
+            complete_review = False
+            original_source = source
+            import os
+            try:
+                context_tokens = max(2048, int(os.environ.get("CHATKODI_LLM_CTX", "16384")))
+            except ValueError:
+                context_tokens = 16384
+            reply_tokens = min(4500, context_tokens // 3)
+            input_chars = min(18000, max(3000, int((context_tokens - reply_tokens - 1000) * 1.5)))
+            for attempt in range(3):
+                say(f"Проверяю и дорабатываю документ: шаг {attempt + 1} из 3…")
+                native = OfficeFile(source)
+                inventory = native.inventory(message, limit=min(11000, input_chars - 2000))
+                additional = document_editing.context(evidence_items, message, inventory,
+                    limit=max(500, input_chars - len(inventory) - len(message) - 2000))
+                payload = self._json(document_editing.PROMPT.format(message=message, name=record["name"],
+                    inventory=inventory, sources=additional, retry=retry), document_editing.SCHEMA, max_tokens=reply_tokens)
+                self._check_cancel()
+                if not payload.get("changes"):
+                    if count:
+                        complete_review = True
+                        break
+                    return AgentResult(str(payload.get("summary") or "Нет конкретных подтверждённых правок. Уточните, что изменить."),
+                                       action="edit_document", incomplete="изменения не внесены")
+                try:
+                    changed = native.patch(payload["changes"], sources=message + "\n" + additional)
+                    self._check_cancel()
+                    path, revision = workspace.next_path()
+                    native.save(path)
+                    verified = OfficeFile(path)
+                    for change in payload["changes"]:
+                        got = verified.get_value(change["id"])
+                        if change["kind"] != "number" and got != change["after"]:
+                            raise ValueError("Проверка сохранённой правки не прошла")
+                        if change["kind"] == "number" and float(got) != float(change["after"].replace(",", ".")):
+                            raise ValueError("Число после сохранения не совпало")
+                    self._check_cancel()
+                    workspace.commit(path, revision, str(payload.get("summary") or message)[:500],
+                                     expected=expected, changes=payload["changes"])
+                    count += changed
+                    all_changes += payload["changes"]
+                    source, expected = workspace.path(), workspace.active["digest"]
+                    retry = "Предыдущие правки уже сохранены. Проверь актуальную версию по тому же заданию. Если конкретных дефектов больше нет, changes=[]."
+                    if not refined:
+                        complete_review = True
+                        break
+                except ValueError as exc:
+                    retry = "ПРЕДЫДУЩИЙ ПЛАН НЕ ПРОШЁЛ ПРОВЕРКУ: " + str(exc) + ". Исправь план; работай с указанной актуальной версией."
+            if not count:
+                return AgentResult("Документ не изменён после трёх попыток: " + retry, action="edit_document", incomplete="проверки правок не прошли")
+            if record.get("action") == "grade":
+                # Mark only the explicitly corrected OCR fields as resolved.
+                if record.get("doubts"):
+                    from core.agent.attachments import _tables_as_markdown
+                    from core.agent import grading
+                    from core.agent.workbook_template import locate_table
+                    from openpyxl.utils import get_column_letter
+                    old_table, _, _ = grading.pick_table([(record["name"], _tables_as_markdown(original_source))])
+                    sheet_name, _, rows = locate_table(original_source, old_table)
+                    sheet_index = next(i for i, (name, _) in enumerate(native.sheets) if name == sheet_name)
+                    changed_ids = {c["id"] for c in all_changes}
+                    unresolved = []
+                    for d in record["doubts"]:
+                        index = next((i for i, row in enumerate(old_table.rows) if " ".join(c for c in row[:2] if c) == d["row_label"]), None)
+                        key = f"xlsx:{sheet_index}:{get_column_letter(d['column'] + 1)}{rows[index]}" if index is not None else ""
+                        if key not in changed_ids:
+                            unresolved.append(d)
+                    workspace.active["doubts"] = unresolved
+                    workspace.save()
+                result = self._do_grade(message, dict(route, source="attachments", output="xlsx", search_query=""), [], say)
+                result.text = f"Внесено правок: {count}. Зависимые баллы и сумма пересчитаны.\n\n" + result.text
+                if not complete_review:
+                    result.text += "\n\nДостигнут лимит трёх шагов проверки; идеальность не подтверждена."
+                    result.incomplete = result.incomplete or "достигнут лимит проверки"
+                return result
+            return AgentResult(str(payload.get("summary") or "Документ доработан.") +
+                               f"\n\nВерсия: {workspace.active['revision']}. Проверено правок: {count}. Оформление и нетронутые части файла сохранены. "
+                               "Внешний вид и вычисление новых формул в Microsoft Office здесь не проверялись." +
+                               (" Достигнут лимит трёх шагов; идеальность не подтверждена." if not complete_review else ""),
+                               action="edit_document", files=[OutputFile(source, "Доработанный документ")],
+                               incomplete="достигнут лимит проверки" if not complete_review else "")
+        except (ValueError, OSError) as exc:
+            return AgentResult(f"Доработка остановлена: {exc}. Исходник и предыдущие версии сохранены.",
+                               action="edit_document", incomplete=str(exc))
+
     def _do_code(self, message, route, new_items, say) -> AgentResult:
         from core.agent import coding
 
@@ -2144,6 +2438,7 @@ class Agent:
             if not payload.get("files") and summary:
                 return AgentResult(summary, action="code", incomplete="модель не вернула изменённые файлы")
             files.update(project.changes(payload))
+            self._check_cancel()
             paths = project.save(files, message)
         except (ValueError, OSError, UnicodeError) as exc:
             return AgentResult(f"Код не сохранён: {exc}. Предыдущая версия проекта сохранена.",
