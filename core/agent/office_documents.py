@@ -39,6 +39,42 @@ def colnum(ref):
     return n
 
 
+def excel_scope(message, sheets):
+    """Explicit sheet/cell addresses take precedence over fuzzy text matches."""
+    quoted = r'''(?:«([^»]+)»|"([^"]+)"|“([^”]+)”|'((?:[^']|'')+)'|([^\s,;.!?«»"']+))'''
+    names = [next(v for v in match if v).replace("''", "'")
+             for match in re.findall(r'\b(?:лист(?:е|а|ы|ах)?|sheet)\s+' + quoted, message, re.I)]
+    names += [a.replace("''", "'") or b for a, b in re.findall(
+        r"(?:'((?:[^']|'')+)'|([^\s!:,;«»\"']+))\s*!\s*(?=\$?[A-Za-z])", message)]
+    available = {name.casefold(): name for name, _ in sheets}
+    unknown = [name for name in names if name.casefold() not in available]
+    if unknown:
+        raise ValueError('Не найден лист: ' + ', '.join(unknown))
+    selected = {available[name.casefold()] for name in names}
+    refs = set()
+    from openpyxl.utils.cell import range_boundaries, get_column_letter
+    for match in re.finditer(r'(?<![\w])\$?([A-Za-z]{1,3})\$?([1-9]\d{0,6})'
+                             r'(?:\s*:\s*\$?([A-Za-z]{1,3})\$?([1-9]\d{0,6}))?(?![\w])', message):
+        col, row, end_col, end_row = match.groups()
+        first = col.upper() + row
+        last = (end_col.upper() + end_row) if end_col else first
+        c1, r1, c2, r2 = range_boundaries(first + ':' + last)
+        if c1 > c2 or r1 > r2 or c2 > 16384 or r2 > 1048576:
+            raise ValueError('Некорректный адрес или диапазон Excel')
+        if (c2 - c1 + 1) * (r2 - r1 + 1) > 200:
+            raise ValueError('Для одной адресной правки укажите диапазон до 200 ячеек')
+        refs.update(f'{get_column_letter(c)}{r}' for c in range(c1, c2 + 1) for r in range(r1, r2 + 1))
+        if len(refs) > 200:
+            raise ValueError('Для одной адресной правки укажите до 200 ячеек')
+    if refs and len(selected) > 1:
+        raise ValueError('Для адресной правки укажите один лист')
+    rows = {int(n) for n in re.findall(r'\bстрок[а-яё]*\s*(?:№\s*)?(\d+)', message, re.I)}
+    rows.update(int(re.search(r'\d+$', ref)[0]) for ref in refs)
+    if any(not 1 <= row <= 1048576 for row in rows):
+        raise ValueError('Некорректный номер строки Excel')
+    return selected, refs, rows
+
+
 class OfficeFile:
     def __init__(self, path):
         self.path = Path(path)
@@ -87,18 +123,47 @@ class OfficeFile:
         """Addressed native contents, with explicit selection when a file is large."""
         groups = []
         self.targets = {}
-        for si, (name, part) in enumerate(self.sheets):
+        sheet_names, refs, explicit_rows = excel_scope(message, self.sheets) if self.sheets else (set(), set(), set())
+        addressed = bool(refs or explicit_rows)
+        eligible = [(si, name, part) for si, (name, part) in enumerate(self.sheets)
+                    if (name in sheet_names if sheet_names else b'ChatKodi generated audit sheet' not in self.parts[part])]
+        if addressed and not sheet_names and len(eligible) > 1:
+            candidates = []
+            for si, name, part in eligible:
+                root = self.tree(part)
+                if refs:
+                    found = any(c.get('r') in refs and self.cell_value(c) != ''
+                                for c in root.findall(f'{{{S}}}sheetData/{{{S}}}row/{{{S}}}c'))
+                else:
+                    found = any(int(row.get('r')) in explicit_rows for row in root.findall(f'{{{S}}}sheetData/{{{S}}}row'))
+                if found:
+                    candidates.append((si, name, part))
+            if len(candidates) != 1:
+                raise ValueError('Укажите лист для адресной правки: ' + ', '.join(name for _, name, _ in candidates or eligible))
+            eligible = candidates
+        allowed_keys = {f'xlsx:{si}:{ref}' for si, _, _ in eligible for ref in refs} if refs else None
+        for si, name, part in eligible:
             root = self.tree(part)
             rows = root.findall(f'{{{S}}}sheetData/{{{S}}}row')
-            width = min(80, max([colnum(c.get('r')) for row in rows for c in row] or [1]))
+            width = min(80, max([colnum(c.get('r')) for row in rows for c in row if self.cell_value(c) != ''] or [1]))
             from openpyxl.utils import get_column_letter
+            existing_rows = {int(row.get('r')) for row in rows}
+            for number in sorted(explicit_rows - existing_rows):
+                rows.append(E.Element(f'{{{S}}}row', r=str(number)))
+            rows.sort(key=lambda row: int(row.get('r')))
             for ri, row in enumerate(rows):
                 cells = {c.get('r'): c for c in row.findall(f'{{{S}}}c')}
                 values = {}
-                for ci in range(1, width + 1):
-                    ref = f'{get_column_letter(ci)}{row.get("r")}'
-                    values[f'xlsx:{si}:{ref}'] = self.cell_value(cells.get(ref))
-                groups.append((f'Лист {si}: {name}; строка {row.get("r")}', values, (part, 'excel'), ri < 8))
+                header = (ri < 7 and not any(c.find(f'{{{S}}}f') is not None for c in cells.values())
+                          and (not addressed or int(row.get('r')) < min(explicit_rows)))
+                row_refs = {f'{get_column_letter(ci)}{row.get("r")}' for ci in range(1, width + 1)}
+                row_refs.update(ref for ref in refs if int(re.search(r'\d+$', ref)[0]) == int(row.get('r')))
+                for ref in sorted(row_refs, key=colnum):
+                    value = self.cell_value(cells.get(ref))
+                    if value != '' or not addressed or not header or ref in refs:
+                        values[f'xlsx:{si}:{ref}'] = value
+                if values:
+                    groups.append((f'Лист {si}: {name}; строка {row.get("r")}', values, (part, 'excel'), header))
         if not self.sheets:
             kind = 'word' if self.path.suffix.lower() == '.docx' else 'ppt'
             ns = W if kind == 'word' else A
@@ -110,18 +175,24 @@ class OfficeFile:
                     text = ''.join(t.text or '' for t in paragraph.iter(f'{{{ns}}}t'))
                     groups.append((part, {key: text}, (part, kind), index < 5))
         full_size = sum(len(json.dumps(v, ensure_ascii=False)) + len(label) for label, v, _, _ in groups)
-        if full_size > limit and re.search(r"переведи|перевести|сократи|весь\s+(?:документ|текст)|целиком", message, re.I):
+        if full_size > limit and not addressed and re.search(r"переведи|перевести|сократи|весь\s+(?:документ|текст)|целиком", message, re.I):
             raise ValueError('Полный текст слишком большой для одной проверяемой правки. Укажите раздел или диапазон; необработанные части нельзя выдавать за готовые.')
         tokens = re.findall(r'[А-Яа-яЁёA-Za-z]{4,}', message.casefold())
-        explicit_rows = {int(n) for n in re.findall(r'(?:строк\w*\s*|[A-Z]{1,3})(\d+)', message, re.I)}
+        if self.sheets:
+            generic = ('исправ', 'измен', 'пересчит', 'балл', 'сумм', 'результ', 'упражнен',
+                       'ведом', 'файл', 'таблиц', 'оформ', 'сохран', 'верни', 'последн',
+                       'верси', 'лист', 'ячейк', 'excel', 'заполн', 'проверь', 'доработ', 'текущ')
+            tokens = [token for token in tokens if not token.startswith(generic)]
         selected = []
         for label, values, meta, header in groups:
             text = ' '.join(values.values()).casefold()
             relevant = any(t[:max(4, len(t)-2)] in text for t in tokens if len(t) >= 4)
-            relevant |= bool(explicit_rows and any(k.startswith('xlsx:') and int(re.search(r'\d+$',k)[0]) in explicit_rows for k in values))
-            if full_size <= limit or header or relevant:
+            if addressed:
+                relevant = any(k.startswith('xlsx:') and int(re.search(r'\d+$',k)[0]) in explicit_rows for k in values)
+            if (full_size <= limit and not addressed) or header or relevant:
                 selected.append((label, values, meta))
-        lines, used = [], 0
+        prefix = '[Большой документ: показаны заголовки и строки по запросу; остальные части сохраняются без изменений]\n' if full_size > limit else ''
+        lines, used = [], len(prefix)
         for label, values, meta in selected:
             line = label + '\n' + json.dumps(values, ensure_ascii=False)
             if used + len(line) > limit:
@@ -129,12 +200,12 @@ class OfficeFile:
             lines.append(line)
             used += len(line)
             for key, value in values.items():
-                self.targets[key] = (meta[0], meta[1], value)
+                if (allowed_keys is not None and key in allowed_keys) or (allowed_keys is None and
+                        (not addressed or int(re.search(r'\d+$', key)[0]) in explicit_rows)):
+                    self.targets[key] = (meta[0], meta[1], value)
         if not lines:
             raise ValueError('В файле не найдены доступные ячейки или текстовые фрагменты')
-        if full_size > limit:
-            lines.insert(0, '[Большой документ: показаны заголовки и строки по запросу; остальные части сохраняются без изменений]')
-        return '\n'.join(lines)
+        return prefix + '\n'.join(lines)
 
     def get_value(self, key):
         if key.startswith('xlsx:'):

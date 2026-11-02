@@ -202,6 +202,44 @@ def calculate_book(template, sources, target, *, doubts=(), cancel_event=None, p
     return '\n\n'.join(bodies), list(dict.fromkeys(used)), '; '.join(issues)
 
 
+def corrected_doubts(source, name, doubts, changes):
+    """Clear OCR doubts only for fields explicitly corrected in the edit plan."""
+    if not doubts:
+        return []
+    from core.agent.attachments import _tables_as_markdown
+    from core.agent import grading
+    from openpyxl.utils import get_column_letter
+    table, _, _ = grading.pick_table([(name, _tables_as_markdown(source))])
+    sheet_name, _, rows = locate_table(source, table)
+    native = OfficeFile(source)
+    sheet_index = next(i for i, (title, _) in enumerate(native.sheets) if title == sheet_name)
+    changed_ids = {c['id'] for c in changes}
+    unresolved = []
+    for doubt in doubts:
+        index = next((i for i, row in enumerate(table.rows)
+                      if ' '.join(c for c in row[:2] if c) == doubt['row_label']), None)
+        key = f"xlsx:{sheet_index}:{get_column_letter(doubt['column'] + 1)}{rows[index]}" if index is not None else ''
+        if key not in changed_ids:
+            unresolved.append(doubt)
+    return unresolved
+
+
+def recalculate_edit(path, sources, *, doubts=(), cancel_event=None, progress=None):
+    """Stage fitness recalculation before publishing the user's edited revision."""
+    if not fitness_tables(path):
+        return None
+    if not sources:
+        raise ValueError('Для пересчёта не сохранены нормативы; приложите документ с нормативами повторно')
+    path = Path(path)
+    pending = path.with_name('.recalculated-' + path.name)
+    try:
+        result = calculate_book(path, sources, pending, doubts=doubts, cancel_event=cancel_event, progress=progress)
+        pending.replace(path)
+        return result
+    finally:
+        pending.unlink(missing_ok=True)
+
+
 def refresh_footer(native, part, table, physical_rows, cached, rules=None):
     """Repair recognized summary fields from calculated rows, retaining cell styles.
 

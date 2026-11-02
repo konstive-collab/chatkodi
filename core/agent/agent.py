@@ -2334,6 +2334,7 @@ class Agent:
             expected = record["digest"]
             evidence_items = [i for i in self.store.items if i.ok and i.name != record["name"]]
             retry, count, all_changes = "", 0, []
+            calculated_result = None
             refined = bool(re.search(r"идеал|пока.*(?:готов|правильн)|проверь.*доработ|все.*ошиб", message, re.I))
             complete_review = False
             original_source = source
@@ -2372,8 +2373,32 @@ class Agent:
                         if change["kind"] == "number" and float(got) != float(change["after"].replace(",", ".")):
                             raise ValueError("Число после сохранения не совпало")
                     self._check_cancel()
+                    recalculated = None
+                    pending_doubts = workspace.active.get("doubts", [])
+                    if record.get("action") == "grade":
+                        from core.agent.workbook_template import recalculate_edit, corrected_doubts
+                        from core.agent.vision import CellDoubt
+                        pending_doubts = corrected_doubts(original_source, record["name"],
+                            record.get("doubts", []), all_changes + payload["changes"])
+                        recalculated = recalculate_edit(path, workspace.norms(),
+                            doubts=[CellDoubt(**d) for d in pending_doubts],
+                            cancel_event=getattr(self, "_cancel_event", None), progress=say)
+                        # Calculation must retain each explicitly corrected input.
+                        final_file = OfficeFile(path)
+                        for change in payload["changes"]:
+                            if final_file.get_value(change["id"]) != verified.get_value(change["id"]):
+                                raise ValueError("Пересчёт изменил исправленное исходное значение")
+                    self._check_cancel()
                     workspace.commit(path, revision, str(payload.get("summary") or message)[:500],
                                      expected=expected, changes=payload["changes"])
+                    if recalculated is not None:
+                        workspace.active["doubts"] = pending_doubts
+                        workspace.save()
+                        body, used, incomplete = recalculated
+                        body += f"\n\nВерсия документа: {revision}. Оформление исходной книги сохранено."
+                        calculated_result = AgentResult(body, action="grade", content=body,
+                            files=[OutputFile(path, "Ведомость: итоговые данные неполные" if incomplete else "Ведомость с сохранением оформления")],
+                            sources=list(dict.fromkeys([record["name"]] + used)), incomplete=incomplete)
                     count += changed
                     all_changes += payload["changes"]
                     source, expected = workspace.path(), workspace.active["digest"]
@@ -2385,24 +2410,17 @@ class Agent:
                     retry = "ПРЕДЫДУЩИЙ ПЛАН НЕ ПРОШЁЛ ПРОВЕРКУ: " + str(exc) + ". Исправь план; работай с указанной актуальной версией."
             if not count:
                 return AgentResult("Документ не изменён после трёх попыток: " + retry, action="edit_document", incomplete="проверки правок не прошли")
+            if calculated_result is not None:
+                calculated_result.text = f"Внесено правок: {count}. Зависимые баллы и сумма пересчитаны.\n\n" + calculated_result.text
+                if not complete_review:
+                    calculated_result.text += "\n\nДостигнут лимит трёх шагов проверки; идеальность не подтверждена."
+                    calculated_result.incomplete = calculated_result.incomplete or "достигнут лимит проверки"
+                return calculated_result
             if record.get("action") == "grade":
-                # Mark only the explicitly corrected OCR fields as resolved.
+                # Non-fitness grading retains its own scale extraction pipeline.
                 if record.get("doubts"):
-                    from core.agent.attachments import _tables_as_markdown
-                    from core.agent import grading
-                    from core.agent.workbook_template import locate_table
-                    from openpyxl.utils import get_column_letter
-                    old_table, _, _ = grading.pick_table([(record["name"], _tables_as_markdown(original_source))])
-                    sheet_name, _, rows = locate_table(original_source, old_table)
-                    sheet_index = next(i for i, (name, _) in enumerate(native.sheets) if name == sheet_name)
-                    changed_ids = {c["id"] for c in all_changes}
-                    unresolved = []
-                    for d in record["doubts"]:
-                        index = next((i for i, row in enumerate(old_table.rows) if " ".join(c for c in row[:2] if c) == d["row_label"]), None)
-                        key = f"xlsx:{sheet_index}:{get_column_letter(d['column'] + 1)}{rows[index]}" if index is not None else ""
-                        if key not in changed_ids:
-                            unresolved.append(d)
-                    workspace.active["doubts"] = unresolved
+                    from core.agent.workbook_template import corrected_doubts
+                    workspace.active["doubts"] = corrected_doubts(original_source, record["name"], record["doubts"], all_changes)
                     workspace.save()
                 result = self._do_grade(message, dict(route, source="attachments", output="xlsx", search_query=""), [], say)
                 result.text = f"Внесено правок: {count}. Зависимые баллы и сумма пересчитаны.\n\n" + result.text
