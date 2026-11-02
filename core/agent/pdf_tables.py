@@ -93,7 +93,10 @@ def _page_markdown(page) -> str:
 
 def read_pdf(path: Path, llm: Any = None, progress: Optional[Callable[[str], None]] = None) -> PDFReading:
     import io
-    import pdfplumber
+    from core.document_dependencies import load_reader
+    from core.agent.cancellation import TaskCancelled
+
+    pdfplumber = load_reader("pdfplumber")
 
     reading = PDFReading()
     texts = []
@@ -125,6 +128,8 @@ def read_pdf(path: Path, llm: Any = None, progress: Optional[Callable[[str], Non
                         reading.issues.append(f"стр. {index}: для скана нужна модель зрения")
                         text += "\n[Скан не распознан: нужна модель зрения]"
                 texts.append(f"--- Страница {index} ---\n{text}")
+            except TaskCancelled:
+                raise
             except Exception as exc:
                 # No silent missing pages. The caller can show the incomplete read.
                 reading.issues.append(f"стр. {index}: не удалось прочитать ({type(exc).__name__})")

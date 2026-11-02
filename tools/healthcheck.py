@@ -134,7 +134,10 @@ def _check_runtime_profile(cfg_data: Dict[str, Any]) -> Dict[str, Any]:
 def run_healthcheck() -> Dict[str, Any]:
     cfg = get_config()
     flags = FeatureFlags.from_config_data(cfg.data)
+    from core.document_dependencies import check_document_readers
+
     payload = {
+        "document_readers": check_document_readers(),
         "project_version": cfg.data.get("version", "unknown"),
         "python": _check_python(),
         "project": _check_project_files(),

@@ -118,6 +118,12 @@ def main() -> int:
         rc = _pip_install(req)
         if rc != 0:
             return rc
+        from core.document_dependencies import check_document_readers
+        readers = check_document_readers()
+        if not readers['ok']:
+            for error in readers['errors'].values():
+                print(error)
+            return 1
 
     if args.download_models:
         return _run([sys.executable, str(root / 'download_models.py')])

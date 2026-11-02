@@ -532,7 +532,9 @@ def run_launcher() -> int:
                 self.tabs.addTab(page, "Diagnostics")
                 return
 
+            from core.document_dependencies import READERS
             for text, cmd in [
+                ("Восстановить компоненты документов", [_python_executable(), "-m", "pip", "install", *[package for _, package in READERS.values()]]),
                 ("Создать .venv и поставить базовые зависимости", [sys.executable, "-m", "tools.bootstrap", "--create-venv", "--install-requirements"]),
                 ("Скачать рекомендуемые модели", [_python_executable(), "download_models.py"]),
                 ("Проверить систему", [_python_executable(), "-m", "tools.doctor"]),

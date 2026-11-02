@@ -1819,6 +1819,12 @@ class Agent:
                         for row in t.rows for g in fitness.groups(t) if g.exercise < len(row) and row[g.exercise].strip()}
             maps, _used, _conflicts = fitness.standards(norms_sources)
             issues = [f"{i.name}: {i.error}" for i in items if i.error and any(n == i.name for n, _ in norms_sources)]
+            # Failed PDFs are excluded from readable items, but their errors must
+            # still explain why the requested standards could not be loaded.
+            failed_pdfs = list(dict.fromkeys((i.name, i.error) for i in self.store.items + list(new_items)
+                                            if i.error and i.path.suffix.lower() == ".pdf"))
+            selected_errors, _ = select_named(failed_pdfs, message)
+            issues += [f"{name}: {error}" for name, error in selected_errors]
             if not required.issubset(maps) and not selection_issue:
                 from core.agent.norm_sources import recover_image_norms
                 repaired, image_issues = recover_image_norms([i for i in items if i is not sheet_item], required - set(maps), self.llm, say)
@@ -1849,7 +1855,7 @@ class Agent:
             if not maps:
                 details = "\n" + "\n".join(issues) if issues else ""
                 return AgentResult("Баллы не проставлены: не найдены проверенные таблицы нормативов для упражнений " +
-                    ", ".join(sorted(required)) + ". Нужны читаемый номер упражнения и пары «результат — баллы» на каждой фотографии. "
+                    ", ".join(sorted(required)) + ". Нужны номер упражнения и пары «результат — баллы» в документе с нормативами. "
                     "Файл не выдаётся как заполненный." + details, action="grade", incomplete="не найдены проверенные нормативы")
             from core.agent.outputs import outputs_dir, safe_name, unique_path
 

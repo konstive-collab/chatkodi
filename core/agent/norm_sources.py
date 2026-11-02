@@ -28,6 +28,7 @@ def select_named(sources, message):
 
 def read_library(docs, llm, progress, cache):
     from core.agent.pdf_tables import read_pdf
+    from core.agent.cancellation import TaskCancelled
     from core.agent.attachments import _tables_as_markdown
 
     sources, issues = [], []
@@ -43,8 +44,10 @@ def read_library(docs, llm, progress, cache):
                 reading = cache[key]
                 sources.append((label, reading.text))
                 issues.extend(f"{label}: {issue}" for issue in reading.issues)
+            except TaskCancelled:
+                raise
             except Exception as exc:
-                issues.append(f"{label}: PDF не прочитан ({type(exc).__name__})")
+                issues.append(f"{label}: PDF не прочитан: {exc}")
         elif path.is_file():
             text = _tables_as_markdown(path) or str(doc.get("content") or "")
             sources.append((label, text))

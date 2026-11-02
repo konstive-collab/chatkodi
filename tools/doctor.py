@@ -32,6 +32,10 @@ def build_doctor_report() -> Dict[str, Any]:
         missing = ', '.join(project.get('missing', [])[:10])
         blockers.append(f'Не хватает файлов проекта: {missing}')
 
+    readers = report.get('document_readers', {})
+    if not readers.get('ok', True):
+        blockers.extend(readers.get('errors', {}).values())
+
     docs = report.get('documents', {})
     if docs.get('count', 0) == 0:
         recommendations.append('В папке документов нет поддерживаемых файлов. Положите пользовательские документы в docs/ или выберите другую папку корпуса.')
