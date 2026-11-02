@@ -1,0 +1,277 @@
+{
+  "cases": [
+    {
+      "mode": "rag",
+      "question": "Какие цели были обнаружены рБпЛА №11 на 10 июня 2025 года?",
+      "must_contain": [
+        "02.45",
+        "08.35",
+        "11.25",
+        "12.50",
+        "17.10",
+        "ПЕТРОВСКОЕ",
+        "ЗЕЛЕНЫЙ ЯР",
+        "НОВОЭКОНОМИЧЕСКОЕ",
+        "БЕРЕСТОВАЯ",
+        "ЗАКИТНОЕ"
+      ],
+      "must_not_contain": [
+        "Надёжность низкая"
+      ],
+      "expected_sources": [
+        "10.docx"
+      ],
+      "forbidden_sources": [
+        "09.docx",
+        "11.docx",
+        "36.docx"
+      ],
+      "expected_event_count": 5
+    },
+    {
+      "mode": "rag",
+      "question": "Какие цели были обнаружены рБпЛА №11 с 10 июня по 11 июня 2025 года?",
+      "expected_sources": [
+        "10.docx",
+        "11.docx"
+      ],
+      "forbidden_sources": [
+        "09.docx",
+        "12.docx",
+        "36.docx"
+      ],
+      "expected_event_count": 10
+    },
+    {
+      "mode": "rag",
+      "question": "Какие цели были вскрыты рБпЛА №11 на 10 июня 2025 года?",
+      "must_contain": [
+        "ПЕТРОВСКОЕ",
+        "ЗАКИТНОЕ"
+      ],
+      "expected_sources": [
+        "10.docx"
+      ],
+      "forbidden_sources": [
+        "36.docx"
+      ],
+      "expected_event_count": 5
+    },
+    {
+      "mode": "rag",
+      "question": "Какие цели относятся к Гр №7213 на 10 июня 2025 года?",
+      "must_contain": [
+        "ВЕРШИНА"
+      ],
+      "expected_sources": [
+        "10.docx"
+      ],
+      "forbidden_sources": [
+        "11.docx",
+        "36.docx"
+      ],
+      "expected_event_count": 1
+    },
+    {
+      "mode": "rag",
+      "question": "Какие цели были обнаружены рБпЛА №99 на 10 июня 2025 года?",
+      "must_contain": [
+        "не найдено"
+      ],
+      "forbidden_sources": [
+        "10.docx",
+        "36.docx"
+      ],
+      "expected_event_count": 0
+    },
+    {
+      "mode": "rag",
+      "question": "Какие цели были обнаружены рБпЛА №11 на 5 августа 2025 года?",
+      "must_contain": [
+        "не найдено"
+      ],
+      "forbidden_sources": [
+        "10.docx",
+        "36.docx"
+      ],
+      "expected_event_count": 0
+    },
+    {
+      "mode": "rag",
+      "question": "Есть ли информаци про использовыание ядерного оружия с 10 июня по 15 июня 2025 года?",
+      "must_contain": [
+        "ядерном",
+        "не установлено"
+      ],
+      "must_not_contain": [
+        "Молния-2",
+        "Изделием-51",
+        "Краткий вывод",
+        "ACTIVITY_REPORT_RU.md",
+        "DEBUGGING_RU.md",
+        "UNIVERSAL_FACT_MODEL_RU.md"
+      ],
+      "expected_sources": [
+        "10.docx",
+        "11.docx",
+        "12.docx",
+        "13.docx",
+        "14.docx",
+        "15.docx"
+      ],
+      "forbidden_sources": [
+        "09.docx",
+        "16.docx",
+        "36.docx"
+      ]
+    },
+    {
+      "mode": "rag",
+      "question": "На каких позиция противник сосредотачивает войска на 10 июня 2025 года?",
+      "must_contain": [
+        "удержании занимаемых позиций по рубежу",
+        "ГРИГОРЕВКА",
+        "ДВУРЕЧНАЯ",
+        "КУПЯНСК",
+        "СЕНЬКОВО",
+        "БОРОВАЯ"
+      ],
+      "must_not_contain": [
+        "Молния-2",
+        "Изделием-51",
+        "Краткий вывод",
+        "поражен применением"
+      ],
+      "expected_sources": [
+        "10.docx"
+      ],
+      "forbidden_sources": [
+        "09.docx",
+        "11.docx",
+        "36.docx"
+      ]
+    },
+    {
+      "mode": "rag",
+      "question": "На каком направлении работал рбпла №11 с 10 по 15 июня 2025 года?",
+      "must_contain": [
+        "рБпЛА №11",
+        "Изюмское направление"
+      ],
+      "must_not_contain": [
+        "ACTIVITY_REPORT_RU.md",
+        "DEBUGGING_RU.md",
+        "UNIVERSAL_FACT_MODEL_RU.md",
+        "поражен применением"
+      ],
+      "expected_sources": [
+        "10.docx"
+      ],
+      "forbidden_sources": [
+        "09.docx",
+        "16.docx"
+      ]
+    },
+    {
+      "mode": "rag",
+      "question": "На каком направлении сосредоточил силы противнк на 10 июня 2025 года?",
+      "must_contain": [
+        "Изюмском направлении",
+        "сосредотачивает основные усилия"
+      ],
+      "must_not_contain": [
+        "Купянское",
+        "Молния-2",
+        "поражен применением",
+        "ACTIVITY_REPORT_RU.md",
+        "UNIVERSAL_FACT_MODEL_RU.md"
+      ],
+      "expected_sources": [
+        "10.docx"
+      ],
+      "forbidden_sources": [
+        "09.docx",
+        "11.docx"
+      ]
+    },
+    {
+      "mode": "rag",
+      "question": "Использовалось ли ядерное оружие на 15 июня 2025 года?",
+      "must_contain": [
+        "ядерном",
+        "не установлено"
+      ],
+      "must_not_contain": [
+        "Военная сводка",
+        "ACTIVITY_REPORT_RU.md",
+        "DEBUGGING_RU.md",
+        "UNIVERSAL_FACT_MODEL_RU.md"
+      ],
+      "expected_sources": [
+        "15.docx"
+      ],
+      "forbidden_sources": [
+        "14.docx",
+        "16.docx"
+      ]
+    },
+    {
+      "mode": "rag",
+      "question": "Статистика применения \"Молния - 2\" с 11 по 13 июня",
+      "must_contain": [
+        "Найдено 6",
+        "2025-06-11",
+        "2025-06-12",
+        "2025-06-13"
+      ],
+      "must_not_contain": [
+        "09.docx",
+        "10.docx",
+        "14.docx",
+        "16.docx",
+        "21.docx",
+        "22.docx",
+        "32.docx",
+        "36.docx"
+      ],
+      "expected_sources": [
+        "11.docx",
+        "12.docx",
+        "13.docx"
+      ],
+      "forbidden_sources": [
+        "09.docx",
+        "10.docx",
+        "14.docx",
+        "16.docx",
+        "36.docx"
+      ],
+      "expected_event_count": 6
+    },
+    {
+      "mode": "rag",
+      "question": "Что происходило на каховском направлении на 6 июня 2025 года?",
+      "must_contain": [
+        "воздушную разведку",
+        "контратаку",
+        "рБпЛА №33",
+        "ЛЬВОВО",
+        "ЧЕРНОБАЕВКА"
+      ],
+      "must_not_contain": [
+        "Краткий вывод",
+        "Ответ намеренно сокращён",
+        "Молния-2",
+        "Изделием-51"
+      ],
+      "expected_sources": [
+        "06.docx"
+      ],
+      "forbidden_sources": [
+        "07.docx",
+        "10.docx",
+        "36.docx"
+      ]
+    }
+  ]
+}

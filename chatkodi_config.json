@@ -1,0 +1,280 @@
+{
+  "version": "2.0.0",
+  "retrieval": {
+    "adaptive_enabled": true,
+    "k_base": 70,
+    "k_step": 80,
+    "k_max": 420,
+    "time_budget_ms": 220,
+    "min_new_candidates": 25,
+    "topn_stability": 20,
+    "stability_overlap": 0.9,
+    "score_improve_eps": 0.01,
+    "bm25_k": 480,
+    "semantic_k": 480,
+    "bm25_weight": 0.35,
+    "semantic_weight": 0.65,
+    "per_doc_chunk_cap": 3,
+    "max_results_cap": 80,
+    "answer_rescue_docs": 4
+  },
+  "context": {
+    "max_docs": 5,
+    "max_chars": 26000,
+    "chunks_per_doc": 3
+  },
+  "context_v2": {
+    "enabled": true,
+    "max_docs": 6,
+    "max_chars": 32000,
+    "window_before": 1,
+    "window_after": 1,
+    "max_chunks_per_doc": 5,
+    "prefer_anchor_chunks": true,
+    "allow_full_doc_fallback": true,
+    "full_doc_max_chars": 7000
+  },
+  "rerank": {
+    "enabled": true,
+    "dedup_enabled": true,
+    "dedup_shingle_size": 6,
+    "dedup_threshold": 0.92,
+    "dedup_max_compare": 300,
+    "rerank_topn": 220,
+    "anchor_boost": 0.1,
+    "date_boost": 0.12,
+    "id_boost": 0.15,
+    "entity_boost": 0.06,
+    "prefer_diversity": true,
+    "diversity_doc_penalty": 0.1,
+    "max_chunks_per_doc_in_top": 4,
+    "learned_enabled": false,
+    "learned_model_path": "",
+    "learned_topn": 40,
+    "learned_weight": 0.35
+  },
+  "intents": {
+    "enabled": true,
+    "profiles": {
+      "fact_lookup": {
+        "description": "Короткий факт/значение/ответ в 1-2 предложения",
+        "retrieval_k_base": 60,
+        "retrieval_k_max": 320,
+        "context_max_docs": 4,
+        "context_max_chars": 18000,
+        "date_strict": false
+      },
+      "date_fact": {
+        "description": "Факт на конкретную дату/в диапазоне",
+        "retrieval_k_base": 90,
+        "retrieval_k_max": 520,
+        "context_max_docs": 6,
+        "context_max_chars": 28000,
+        "date_strict": true
+      },
+      "id_fact": {
+        "description": "Факт про конкретный ID/№ (робот №11, акт №, заявка)",
+        "retrieval_k_base": 110,
+        "retrieval_k_max": 600,
+        "context_max_docs": 7,
+        "context_max_chars": 32000,
+        "date_strict": false
+      },
+      "summary": {
+        "description": "Сводка/пересказ/что происходило",
+        "retrieval_k_base": 130,
+        "retrieval_k_max": 700,
+        "context_max_docs": 8,
+        "context_max_chars": 38000,
+        "date_strict": false
+      },
+      "compare": {
+        "description": "Сравнение (что изменилось между датами/объектами)",
+        "retrieval_k_base": 150,
+        "retrieval_k_max": 800,
+        "context_max_docs": 9,
+        "context_max_chars": 42000,
+        "date_strict": true
+      }
+    }
+  },
+  "ui": {
+    "preview_chars": 800,
+    "extract_docs_min": 1,
+    "extract_docs_max": 30,
+    "extract_docs_rel_threshold": 0.6,
+    "extract_docs_abs_threshold": 0.18,
+    "extract_docs_request_k": 40,
+    "extract_chunks_per_doc": 1,
+    "query_mode": "auto",
+    "search_strictness": "balanced",
+    "source_scope": "all",
+    "show_explain_button": true,
+    "animate_ui": true,
+    "theme": "classic"
+  },
+  "history": {
+    "enabled": true,
+    "path": "chat_history.jsonl",
+    "max_entries": 200
+  },
+  "domain_lexicon": {
+    "actor_aliases": [
+      "рбпла", "бпла", "шгр", "дшб", "одшбр", "омсбр", "мсбр", "гр",
+      "группа", "расчет", "расчёт", "подразделение",
+      "uav", "drone", "group", "team", "crew", "unit", "department", "service", "device", "system"
+    ],
+    "family_equivalents": {
+      "рбпла": ["рбпла", "бпла", "uav"]
+    }
+  },
+  "domain_profile": {
+    "name": "military_reports",
+    "custom": {}
+  },
+  "features": {
+    "plugin_loader_enabled": false,
+    "diagnostics_enabled": true,
+    "healthcheck_cli_enabled": true,
+    "telemetry_enabled": false,
+    "benchmark_cli_enabled": true,
+    "resilience_enabled": true,
+    "auto_profile_enabled": true
+  },
+  "diagnostics": {
+    "enabled": true,
+    "trace_search": true,
+    "trace_extract": true,
+    "trace_dir": ".chatkodi/logs/diagnostics",
+    "max_preview_chars": 240,
+    "max_trace_items": 12
+  },
+  "plugins": {
+    "enabled": false,
+    "directory": "plugins",
+    "auto_discover": true
+  },
+  "telemetry": {
+    "enabled": false,
+    "log_dir": ".chatkodi/logs/telemetry",
+    "benchmark_dir": ".chatkodi/logs/benchmarks",
+    "events_file": "events.jsonl",
+    "capture_question": true,
+    "capture_response_preview": true,
+    "capture_context_preview": false,
+    "max_preview_chars": 500,
+    "include_environment": true,
+    "session_separate_file": true
+  },
+  "runtime_profiles": {
+    "auto_detect": true,
+    "force_profile": "",
+    "auto_apply_limits": true
+  },
+  "resilience": {
+    "enabled": true,
+    "safe_mode_enabled": true,
+    "continue_on_optional_stage_failure": true,
+    "llm_startup_mode": "auto",
+    "record_incidents": true,
+    "incident_dir": ".chatkodi/logs/recovery",
+    "auto_disable_llm_after_failure": true,
+    "auto_apply_runtime_hints": true,
+    "max_llm_failures": 2
+  },
+  "structured_answers": {
+    "enabled": true,
+    "max_docs": 8,
+    "max_evidence_items": 3,
+    "prefer_algorithmic_for_facts": true
+  },
+  "memory_guard": {
+    "enabled": true,
+    "force_chunk_mode_on_large_corpus": true,
+    "force_structured_for_fact_questions": true
+  },
+  "explainable": {
+    "enabled": true,
+    "max_evidence_items": 12
+  },
+  "analytics": {
+    "event_store_enabled": true,
+    "structured_first": true
+  },
+  "query_planner": {
+    "enabled": true,
+    "use_llm_router": true,
+    "min_confidence": 0.72,
+    "max_tokens": 96,
+    "context_limit": 1800,
+    "temperature": 0.05,
+    "use_on_simple_questions": false,
+    "timeout_seconds": 45.0,
+    "cache_size": 128
+  },
+  "answer_quality": {
+    "enabled": true,
+    "prefer_structured_on_bad_llm": true,
+    "append_structured_when_uncertain": true,
+    "min_llm_chars": 20
+  },
+  "grounded_reasoning": {
+    "enabled": true,
+    "strict_validation": true,
+    "max_evidence_items": 18,
+    "max_evidence_chars": 18000,
+    "max_item_chars": 2200,
+    "max_tokens": 520,
+    "retry_invalid_json": true
+  },
+  "evidence_budget": {
+    "enabled": true,
+    "range_max_docs": 14,
+    "range_chunks_per_doc": 7,
+    "stats_max_docs": 10,
+    "stats_chunks_per_doc": 6,
+    "exact_max_docs": 6,
+    "exact_chunks_per_doc": 3
+  },
+  "llm_runtime": {
+    "rag_allow_lazy_load": false,
+    "chat_allow_lazy_load": false
+  },
+  "event_store": {
+    "max_sync_chunks": 1200,
+    "max_sync_seconds": 10
+  },
+  "answer_presentation": {
+    "default_mode": "concise",
+    "show_detailed_statistics_only_on_request": true,
+    "max_evidence_examples_default": 2,
+    "max_sources_inline_default": 8,
+    "show_confidence_warnings": true
+  },
+  "search_preferences": {
+    "strictness_levels": {
+      "strict": "меньше кандидатов, жёстче дата/объект/действие",
+      "balanced": "по умолчанию: точность + умеренная ширина",
+      "broad": "больше кандидатов для лекций, рецептов и свободных формулировок"
+    },
+    "query_modes": [
+      "auto",
+      "exact_fact",
+      "activity_report",
+      "statistics",
+      "document_search"
+    ]
+  },
+  "generation": {
+    "enabled": true,
+    "catalog_root": "documents",
+    "allow_creative_exercises": true,
+    "label_creative_additions": true,
+    "legal_template_formats": [".docx"],
+    "block_unresolved_legal_fields": true,
+    "legal_patch_max_tokens": 1200,
+    "legal_context_limit": 24000,
+    "sport_max_tokens": 560,
+    "sport_context_limit": 14000
+  }
+}

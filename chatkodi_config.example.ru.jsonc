@@ -1,0 +1,156 @@
+{
+  // Версия пользовательского конфига.
+  "version": "1.9.0",
+
+  "retrieval": {
+    "adaptive_enabled": true,
+    "k_base": 80,
+    "k_step": 80,
+    "k_max": 480,
+    "time_budget_ms": 280,
+    "min_new_candidates": 25,
+    "topn_stability": 20,
+    "stability_overlap": 0.9,
+    "score_improve_eps": 0.01,
+    "bm25_k": 480,
+    "semantic_k": 480,
+    "bm25_weight": 0.35,
+    "semantic_weight": 0.65,
+    "per_doc_chunk_cap": 3,
+    "max_results_cap": 80,
+    "answer_rescue_docs": 4
+  },
+
+  "context": {
+    "max_docs": 5,
+    "max_chars": 26000,
+    "chunks_per_doc": 3
+  },
+
+  "context_v2": {
+    "enabled": true,
+    "max_docs": 6,
+    "max_chars": 32000,
+    "window_before": 1,
+    "window_after": 1,
+    "max_chunks_per_doc": 5,
+    "prefer_anchor_chunks": true,
+    "allow_full_doc_fallback": true,
+    "full_doc_max_chars": 7000
+  },
+
+  "rerank": {
+    "enabled": true,
+    "dedup_enabled": true,
+    "dedup_shingle_size": 6,
+    "dedup_threshold": 0.92,
+    "dedup_max_compare": 300,
+    "rerank_topn": 220,
+    "anchor_boost": 0.1,
+    "date_boost": 0.12,
+    "id_boost": 0.15,
+    "entity_boost": 0.06,
+    "prefer_diversity": true,
+    "diversity_doc_penalty": 0.1,
+    "max_chunks_per_doc_in_top": 4,
+    "learned_enabled": false,
+    "learned_model_path": "",
+    "learned_topn": 40,
+    "learned_weight": 0.35
+  },
+
+  "intents": {
+    "enabled": true,
+    "profiles": {
+      "fact_lookup": {
+        "description": "Короткий факт или значение",
+        "retrieval_k_base": 60,
+        "retrieval_k_max": 320,
+        "context_max_docs": 4,
+        "context_max_chars": 18000,
+        "date_strict": false
+      }
+    }
+  },
+
+  "ui": {
+    "preview_chars": 800,
+    "extract_docs_min": 1,
+    "extract_docs_max": 30,
+    "extract_docs_rel_threshold": 0.6,
+    "extract_docs_abs_threshold": 0.18,
+    "extract_docs_request_k": 40,
+    "extract_chunks_per_doc": 1
+  },
+
+  "history": {
+    "enabled": true,
+    "path": "chat_history.jsonl",
+    "max_entries": 200
+  },
+
+  "domain_lexicon": {
+    "actor_aliases": ["рбпла", "бпла", "группа", "подразделение", "uav", "drone", "group", "team", "unit", "service", "device", "system"],
+    "family_equivalents": {
+      "рбпла": ["рбпла", "бпла", "uav"]
+    }
+  },
+
+  "features": {
+    "plugin_loader_enabled": false,
+    "diagnostics_enabled": false,
+    "healthcheck_cli_enabled": true
+  },
+
+  "diagnostics": {
+    "enabled": false,
+    "trace_search": false,
+    "trace_extract": false,
+    "trace_dir": ".chatkodi/logs/diagnostics",
+    "max_preview_chars": 240,
+    "max_trace_items": 12
+  },
+
+  "plugins": {
+    "enabled": false,
+    "directory": "plugins",
+    "auto_discover": true
+  },
+
+  "llm_runtime": {
+    "rag_fast_max_tokens": 220,
+    "rag_full_max_tokens": 360,
+    "chat_max_tokens": 320,
+    "low_resource_context_chars": 9000,
+    "balanced_context_chars": 12000,
+    "high_context_chars": 16000
+  },
+
+  "generation": {
+    "enabled": true,
+    "catalog_root": "documents",
+    "allow_creative_exercises": true,
+    "label_creative_additions": true,
+    "legal_template_formats": [".docx"],
+    "block_unresolved_legal_fields": true
+  }
+}
+
+
+// Telemetry and diagnostics example
+// "features": {
+//   "diagnostics_enabled": true,
+//   "telemetry_enabled": true,
+//   "benchmark_cli_enabled": true
+// },
+// "diagnostics": {
+//   "enabled": true,
+//   "trace_search": true,
+//   "trace_extract": true,
+//   "trace_dir": ".chatkodi/logs/diagnostics"
+// },
+// "telemetry": {
+//   "enabled": true,
+//   "log_dir": ".chatkodi/logs/telemetry",
+//   "benchmark_dir": ".chatkodi/logs/benchmarks"
+// }

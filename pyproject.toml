@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chatkodi"
+version = "2.0.0"
+description = "Offline desktop RAG and document-generation assistant"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "PyQt5==5.15.11",
+  "PyPDF2==3.0.1",
+  "pdfplumber==0.11.7",
+  "python-docx==1.2.0",
+  "numpy==1.26.4",
+  "rank-bm25==0.2.2",
+  "sentence-transformers==3.4.1",
+  "transformers==4.57.6",
+  "huggingface-hub==0.36.0",
+  "accelerate==1.14.0",
+  "torch==2.3.0",
+  "psutil==7.2.1",
+  "python-dateutil==2.9.0.post0",
+  "pymorphy3==2.0.6",
+  "beautifulsoup4==4.14.3",
+  "striprtf==0.0.32",
+  "openpyxl==3.1.5",
+  "xlrd==2.0.2",
+  "python-pptx==1.0.2",
+  "odfpy==1.4.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.4.2", "reportlab==4.4.3"]
+web = ["fastapi==0.141.1", "uvicorn[standard]==0.52.4"]
+build = ["pyinstaller==6.21.0"]
+
+[tool.setuptools.packages.find]
+include = ["core*", "gui*", "integrations*", "plugins*", "tools*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

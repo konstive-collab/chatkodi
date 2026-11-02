@@ -1,0 +1,62 @@
+{
+  "_comment": "Questions over the daily summaries in docs/ (a series of long reports with one template). Gold values were computed by a test-only parser and checked against the text; the product has no format-specific code for them. Traps: 26 June appears in two files, 29 June is missing, a file is dated 31 June, a place name has a typo (НОВОПАвЛОВКА).",
+  "cases": [
+    {"category": "fact", "question": "Сколько единиц автотехники обнаружено у МИРНОЕ 18 июня 2025 года?", "expect_numbers": [10]},
+    {"category": "fact", "question": "Во сколько 10 июня 2025 года была обнаружена пусковая установка РСЗО?", "expect_any": ["21.15", "21:15"]},
+    {"category": "fact", "question": "Какой объект обнаружен 10 июня 2025 года в районе ДОНЦОВКА?", "expect_any": ["блиндаж"]},
+    {"category": "fact", "question": "Чем была поражена БМП 10 июня 2025 года?", "expect_any": ["ПТУР"]},
+    {"category": "fact", "question": "Сколько человек было на позиции отделения западнее ЗЕЛЕНЫЙ ЯР по сводке на 31 июня?", "expect_numbers": [12]},
+    {"category": "fact", "question": "Какие подразделения противник перебросил в КУПЯНСК по сводке на 10 июня 2025 года?", "expect_any": ["11 оц", "135 омбр", "3 мб"], "min_hits": 2},
+
+    {"category": "paraphrase", "question": "Где 10 июня заметили склад с боеприпасами и что с ним сделали?", "expect_any": ["НОВОПАВЛОВК"], "expect_any_2": ["пораж", "пораз"]},
+    {"category": "paraphrase", "question": "Где противник пытался отбить свои позиции 10 июня 2025 года?", "expect_any": ["КРЕМЕНН", "ЛИМАН", "НОВОМИКОЛАЕВК"], "min_hits": 2},
+    {"category": "paraphrase", "question": "Над какими населёнными пунктами противник летал на разведку на Запорожском направлении 10 июня?", "expect_any": ["ВОЛЧАНСК", "НОВОАЛЕКСЕЕВК", "УКРАИНК", "ТЕРНОВК", "ЧЕРВОНОЕ", "НОВОПОЛТАВК"], "min_hits": 3},
+    {"category": "paraphrase", "question": "Какую технику подбили противотанковой ракетой 10 июня?", "expect_any": ["БМП"]},
+
+    {"category": "list", "question": "Какие цели поражены 10 июня 2025 года?", "expect_any": ["укрепленн", "пикап", "БМП", "склад"], "min_hits": 4},
+    {"category": "list", "question": "Что обнаружил рБпЛА №33 10 июня 2025 года?", "expect_any": ["ПВД", "оборудование связи", "БМП", "АТ", "РСЗО"], "min_hits": 4},
+    {"category": "list", "question": "Перечисли все цели, обнаруженные рБпЛА №11 10 июня 2025 года", "expect_any": ["внедорожник", "позиция отделения", "блокпост", "ПВД"], "min_hits": 4},
+
+    {"category": "count_day", "question": "Сколько целей было поражено 11 июня 2025 года?", "expect_numbers": [3]},
+    {"category": "count_day", "question": "Сколько контратак провёл противник по сводке на 9 июня 2025 года?", "expect_numbers": [5]},
+    {"category": "count_day", "question": "Сколько человек противника уничтожено при отражении контратак 10 июня 2025 года?", "expect_numbers": [12]},
+    {"category": "count_day", "question": "Сколько целей всего обнаружили все рБпЛА 10 июня 2025 года?", "expect_numbers": [15]},
+
+    {"category": "aggregate", "question": "Сколько всего единиц автотехники было обнаружено у МИРНОЕ с 7 по 13 июня 2025 года?", "expect_numbers": [33]},
+    {"category": "aggregate", "question": "Сколько раз за весь период цели поражались БпЛА «Молния-2»?", "expect_numbers": [62]},
+    {"category": "aggregate", "question": "Сколько всего контратак было с 6 по 10 июня 2025 года?", "expect_numbers": [19]},
+    {"category": "aggregate", "question": "Сколько раз поражалась БМП с 6 по 12 июня 2025 года?", "expect_numbers": [3]},
+
+    {"category": "max_trend", "question": "Когда у МИРНОЕ видели больше всего автотехники?", "expect_any": ["4 июля", "04.07"], "expect_numbers": [21]},
+    {"category": "max_trend", "question": "Как менялось количество автотехники у МИРНОЕ за период?", "expect_any": ["рост", "увелич", "возраст"]},
+    {"category": "max_trend", "question": "В какие дни у МИРНОЕ видели больше 15 единиц автотехники?", "expect_any": ["28 июня", "28.06", "31 июня", "31.06", "2 июля", "02.07", "4 июля", "04.07"], "min_hits": 3},
+
+    {"category": "compare", "question": "Сравни количество автотехники у МИРНОЕ 18 и 20 июня 2025 года", "expect_numbers": [10, 11]},
+    {"category": "compare", "question": "Когда противник потерял убитыми больше при контратаках — 6 или 10 июня 2025 года?", "expect_any": ["10 июня", "10.06"], "expect_numbers": [12]},
+
+    {"category": "time_order", "question": "Что первым обнаружил рБпЛА №22 10 июня 2025 года?", "expect_any": ["ПВД", "РОВНОЕ"], "min_hits": 2},
+    {"category": "time_order", "question": "Какая цель была обнаружена рБпЛА №11 последней 10 июня 2025 года и во сколько?", "expect_any": ["17.10", "17:10"], "expect_text": ["ЗАКИТНОЕ"]},
+
+    {"category": "yes_no", "question": "Применял ли противник ядерное оружие по сводке на 10 июня 2025 года?", "expect_any": ["нет", "не установлено", "не применял"]},
+    {"category": "yes_no", "question": "Удалось ли противнику вернуть позиции у КРЕМЕННАЯ 10 июня 2025 года?", "expect_any": ["нет", "успеха не имел", "не удалось"]},
+    {"category": "yes_no", "question": "Видели ли автотехнику у МИРНОЕ 9 июня 2025 года?", "expect_any": ["нет", "не обнаруж", "не упомина", "не указ", "нет данных", "нет информации"], "forbid_any": ["8 ед", "9 ед", "7 ед"]},
+
+    {"category": "not_in_docs", "question": "Что известно по сводке на 29 июня 2025 года?", "expect_not_found": true},
+    {"category": "not_in_docs", "question": "Какие цели обнаружил рБпЛА №44?", "expect_not_found": true},
+    {"category": "not_in_docs", "question": "Что происходило 15 августа 2025 года?", "expect_not_found": true},
+    {"category": "not_in_docs", "question": "Сколько танков было поражено 10 июня 2025 года?", "expect_any": ["ни одного", "не поражал", "танк не", "нет информации", "не найден", "не указ", "не упомина", "нет данных", "отсутству"]},
+
+    {"category": "duplicates", "question": "Сколько единиц автотехники было у МИРНОЕ по сводке на 26 июня 2025 года?", "expect_numbers": [15]},
+
+    {"category": "colloquial", "question": "скока техники у мирнова было 20 июня", "expect_numbers": [11]},
+    {"category": "colloquial", "question": "чем долбанули склад боеприпасов 10 июня", "expect_any": ["Молния", "FPV"]},
+    {"category": "colloquial", "question": "где был блокпост с тремя человеками 10 июня", "expect_any": ["БЕРЕСТОВ"]},
+    {"category": "colloquial", "question": "что поразили в новопавловке 22 июня", "expect_any": ["склад"]},
+
+    {"category": "summary", "question": "Перескажи обстановку на Каховском направлении по сводке на 10 июня 2025 года", "expect_any": ["Херсонск", "контратак", "разведк", "НОВОМИКОЛАЕВК", "ВОЗНЕСЕНСК", "ИВАНОВК"], "min_hits": 3},
+    {"category": "summary", "question": "Кратко: что произошло по сводке на 10 июня 2025 года?", "expect_any": ["КУПЯНСК", "контратак", "пораж", "разведк", "склад"], "min_hits": 3},
+
+    {"category": "multi_doc", "question": "В какие дни поражалась БМП у ЛУКАШЕВКА с 6 по 12 июня 2025 года?", "expect_any": ["7 июня", "07.06", "8 июня", "08.06", "10 июня", "10.06"], "min_hits": 3},
+    {"category": "multi_doc", "question": "На сколько выросло количество автотехники у МИРНОЕ с 7 июня до 4 июля 2025 года?", "expect_numbers": [12]}
+  ]
+}

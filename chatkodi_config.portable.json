@@ -1,0 +1,18 @@
+{
+  "domain_profile": {"name": "general", "custom": {}},
+  "version": "2.0.0",
+  "generation": {
+    "enabled": true,
+    "catalog_root": "documents",
+    "allow_creative_exercises": true,
+    "label_creative_additions": true,
+    "legal_template_formats": [".docx"],
+    "block_unresolved_legal_fields": true
+  },
+  "telemetry": {
+    "enabled": false,
+    "capture_question": false,
+    "capture_response_preview": false,
+    "capture_context_preview": false
+  }
+}

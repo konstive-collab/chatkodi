@@ -1,0 +1,78 @@
+{
+  "_comment": "Gold answers checked by hand against tools/diverse_corpus.py. Numbers are compared without thousand separators.",
+  "not_found_phrases": ["нет информации", "не найден", "не указ", "не упомина", "отсутству", "нет данных", "не содерж", "нет сведений", "не приводится", "не определ"],
+  "cases": [
+    {"category": "fact", "question": "На какую сумму заключён договор поставки № 47/2025?", "expect_numbers": [3480000]},
+    {"category": "fact", "question": "Какой гарантийный срок на аккумуляторные батареи погрузчиков?", "expect_numbers": [12], "expect_any": ["месяц"]},
+    {"category": "fact", "question": "Кто назначен ответственным за пожарную безопасность?", "expect_any": ["Ершов"]},
+    {"category": "fact", "question": "Какова грузоподъёмность погрузчика ЕП-25?", "expect_numbers": [2500]},
+    {"category": "fact", "question": "Сколько стоит датчик давления ДД-10?", "expect_numbers": [7300]},
+    {"category": "fact", "question": "Какой номер накладной указан в рекламации ООО «Север»?", "expect_numbers": [1934]},
+    {"category": "fact", "question": "Какая выручка была во втором квартале 2025 года?", "expect_any": ["21,7", "21.7"]},
+    {"category": "fact", "question": "Какой лимит на проживание в командировке в Москве?", "expect_numbers": [7500]},
+
+    {"category": "paraphrase", "question": "Какой максимальный вес может поднять наш электропогрузчик?", "expect_numbers": [2500]},
+    {"category": "paraphrase", "question": "Кто у нас отвечает за пожарку на складе?", "expect_any": ["Ершов"]},
+    {"category": "paraphrase", "question": "В каком суде будут разбираться споры с поставщиком погрузчиков?", "expect_any": ["арбитражн"]},
+    {"category": "paraphrase", "question": "Сколько денег положено в день, если еду в командировку за границу?", "expect_numbers": [2500]},
+    {"category": "paraphrase", "question": "Как часто нужно делать первое техобслуживание погрузчика?", "expect_numbers": [250]},
+    {"category": "paraphrase", "question": "На какие деньги закроют перерасход по ремонту крыши?", "expect_any": ["резерв"]},
+    {"category": "paraphrase", "question": "Сколько продукции недовыпустили из-за остановки линии фасовки?", "expect_numbers": [4200]},
+
+    {"category": "why", "question": "Почему перенесли запуск склада № 2?", "expect_any": ["металлоконструкц", "стеллаж"]},
+    {"category": "why", "question": "Из-за чего остановилась линия фасовки № 3?", "expect_any": ["датчик"]},
+    {"category": "why", "question": "Почему клиент ООО «Север» прислал рекламацию?", "expect_any": ["порван", "поврежд"]},
+
+    {"category": "deadline", "question": "До какого числа Кравцов должен подготовить смету на обучение водителей?", "expect_any": ["20 мая", "20.05"]},
+    {"category": "deadline", "question": "До какой даты действует договор поставки погрузчиков?", "expect_any": ["31 декабря", "31.12"]},
+    {"category": "deadline", "question": "В какой срок нужно сдать авансовый отчёт после командировки?", "expect_numbers": [3], "expect_any": ["рабоч"]},
+    {"category": "deadline", "question": "Когда пройдёт следующее совещание руководителей?", "expect_any": ["28 мая", "28.05"]},
+    {"category": "deadline", "question": "За сколько дней ООО «Север» просит заменить повреждённые короба?", "expect_numbers": [10]},
+
+    {"category": "calculation", "question": "Какую неустойку заплатит поставщик, если погрузчики привезут на 20 дней позже срока?", "expect_numbers": [69600]},
+    {"category": "calculation", "question": "Какой максимальный размер неустойки по договору поставки в рублях?", "expect_numbers": [348000]},
+    {"category": "calculation", "question": "Сколько составляет аванс по договору № 47/2025 в рублях?", "expect_numbers": [1044000]},
+    {"category": "calculation", "question": "Сколько стоит один погрузчик по договору поставки?", "expect_numbers": [1160000]},
+    {"category": "calculation", "question": "Сколько всего выручки получено за первое полугодие 2025 года?", "expect_any": ["39,9", "39.9", "39 900 000"]},
+    {"category": "calculation", "question": "Сколько суточных получит сотрудник за командировку в Казань на 3 дня?", "expect_numbers": [2100]},
+
+    {"category": "compare", "question": "Что дороже — пластиковый или деревянный поддон, и на сколько?", "expect_any": ["пластик"], "expect_numbers": [2250]},
+    {"category": "compare", "question": "Насколько выручка второго квартала выше первого?", "expect_any": ["3,5", "3.5", "3 500 000", "19"]},
+    {"category": "compare", "question": "Чей отпуск длиннее — Кравцова или Тимофеева?", "expect_any": ["Тимофеев"]},
+
+    {"category": "table", "question": "Какие товары в прайс-листе сейчас только под заказ?", "expect_any": ["скотч", "тележк"], "min_hits": 2},
+    {"category": "table", "question": "Кто из сотрудников уходит в отпуск в июле 2025 года?", "expect_any": ["Кравцов", "Тимофеев", "Сомов"], "min_hits": 3, "forbid_any": ["Белова"]},
+    {"category": "table", "question": "Когда отпуск у генерального директора?", "expect_any": ["4 августа", "04.08", "августа"]},
+    {"category": "table", "question": "Какой самый дорогой товар в прайс-листе?", "expect_any": ["тележк"]},
+
+    {"category": "list", "question": "Что запрещено делать при работе на погрузчике ЕП-25?", "expect_any": ["люд", "2500", "поднят", "огн"], "min_hits": 3},
+    {"category": "list", "question": "Кто присутствовал на совещании 14 мая?", "expect_any": ["Кравцов", "Ершов", "Тимофеев", "Белов"], "min_hits": 3},
+    {"category": "list", "question": "Какие цели поставлены на второе полугодие 2025 года?", "expect_any": ["45", "простои", "30 %", "30%", "водител"], "min_hits": 2},
+
+    {"category": "summary", "question": "Перескажи протокол совещания от 14 мая 2025 года", "expect_any": ["склад", "1 июля", "погрузчик", "180", "кровл", "четырёхднев", "четырехднев"], "min_hits": 3},
+    {"category": "summary", "question": "О чём служебная записка Сомова?", "expect_any": ["линия", "датчик", "3,5", "210", "простой", "простоя"], "min_hits": 3},
+    {"category": "summary", "question": "Кратко: что в письме от ООО «Север»?", "expect_any": ["рекламац", "12", "короб", "замен"], "min_hits": 3},
+
+    {"category": "multi_doc", "question": "Кто будет отвечать за пожарную безопасность, пока Ершова в отпуске, и когда этот отпуск?", "expect_any": ["Кравцов"], "expect_text": ["июн"]},
+    {"category": "multi_doc", "question": "Сколько будет стоить запас датчиков давления, который предложил Сомов в служебной записке?", "expect_numbers": [14600]},
+    {"category": "multi_doc", "question": "На какую сумму повреждены короба в рекламации ООО «Север», если считать по прайс-листу?", "expect_numbers": [1140]},
+    {"category": "multi_doc", "question": "Будет ли Кравцов на работе, когда запустят склад № 2?", "expect_any": ["07.07", "7 июля"], "forbid_any": ["не будет", "будет в отпуске"]},
+
+    {"category": "yes_no", "question": "Можно ли начальнику склада лететь в командировку бизнес-классом?", "expect_any": ["нет", "только для генерального", "не допускается", "нельзя"]},
+    {"category": "yes_no", "question": "Можно ли поднимать погрузчиком ЕП-25 груз весом 3 тонны?", "expect_any": ["нет", "нельзя", "запрещ"]},
+    {"category": "yes_no", "question": "Пострадал ли кто-нибудь при остановке линии фасовки?", "expect_any": ["нет", "не пострадал", "пострадавших нет", "не было"]},
+    {"category": "yes_no", "question": "Приняли ли предложение о четырёхдневной рабочей неделе?", "expect_any": ["нет", "отклон"]},
+
+    {"category": "colloquial", "question": "скока стоит тележка гидравличская?", "expect_numbers": [24500]},
+    {"category": "colloquial", "question": "чё там с линией фасовки сломалось то?", "expect_any": ["датчик"]},
+    {"category": "colloquial", "question": "что делать если погрузчик выдал ошибку Е07", "expect_any": ["30 минут", "перегрев"]},
+    {"category": "colloquial", "question": "какое давлние в шинах у погрузчика", "expect_numbers": [7], "expect_any": ["бар"]},
+
+    {"category": "not_in_docs", "question": "Какой штраф за нарушение правил пожарной безопасности?", "expect_not_found": true},
+    {"category": "not_in_docs", "question": "Сколько стоит обучение водителей погрузчиков?", "expect_not_found": true},
+    {"category": "not_in_docs", "question": "Какая выручка была в третьем квартале 2025 года?", "expect_not_found": true},
+    {"category": "not_in_docs", "question": "Кто директор ООО «Север»?", "expect_not_found": true, "forbid_any": ["Захаров"]},
+    {"category": "not_in_docs", "question": "Какая зарплата у начальника склада?", "expect_not_found": true},
+    {"category": "not_in_docs", "question": "Есть ли в прайс-листе цемент и сколько он стоит?", "expect_not_found": true}
+  ]
+}

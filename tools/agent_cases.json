@@ -1,0 +1,375 @@
+{
+  "scenarios": [
+    {
+      "name": "Протокол бетона: файл → проверка → заключение по образцу → перевод",
+      "turns": [
+        {"attach": ["protokol_ispytaniy_betona.jpg"], "message": "",
+         "expect_action": "inspect", "expect_files": [".docx"], "expect_any": ["34,7"], "expect_any_2": ["протокол", "бетон"]},
+        {"message": "Проверь результаты по нашим нормативам",
+         "expect_action": "check", "expect_any": ["32,7"], "expect_any_2": ["несоответствий не найдено"], "forbid_any": ["✗ не соответствует"]},
+        {"message": "Оформи заключение о прочности по нашему образцу",
+         "expect_action": "make_document", "expect_files": [".docx"],
+         "expect_any": ["34,7"], "expect_any_2": ["145/26"], "expect_any_3": ["Садовая"],
+         "forbid_any": ["41,5", "37,8", "98/26", "Промышленная"]},
+        {"message": "Переведи это заключение на английский",
+         "expect_action": "translate", "expect_any": ["concrete"], "expect_any_2": ["34.7", "34,7"]},
+        {"message": "Какая минимальная прочность образца в протоколе?",
+         "expect_action": "answer", "expect_any": ["33,0", "33.0"]}
+      ]
+    },
+    {
+      "name": "Рукописный журнал температуры против инструкции",
+      "turns": [
+        {"attach": ["zamery_temperatury.jpg"], "message": "Соответствует ли температура в цехе требованиям инструкции?",
+         "expect_action": "check", "expect_any": ["24,1"], "expect_any_2": ["не соответствует"]},
+        {"message": "Во сколько была самая высокая температура?",
+         "expect_action": "answer", "expect_any": ["14:00", "14.00"], "expect_any_2": ["24,1", "24.1"]}
+      ]
+    },
+    {
+      "name": "Счёт: в Excel, правила оплаты, цена",
+      "turns": [
+        {"attach": ["schet_318.jpg"], "message": "Сделай из счёта таблицу Excel",
+         "expect_action": "transcribe", "expect_files": [".xlsx"], "expect_any": ["✓"]},
+        {"message": "Можно оплатить этот счёт без согласования с финансовым директором?",
+         "expect_any": ["нет", "нельзя", "не соответствует", "требуется согласование", "необходимо согласование"], "expect_any_2": ["30 000", "30000"]},
+        {"message": "Сколько стоит один картридж по этому счёту?",
+         "expect_action": "answer", "expect_any": ["7 450", "7450"]}
+      ]
+    },
+    {
+      "name": "Письмо: перевод и ответ",
+      "turns": [
+        {"attach": ["pismo_terminal.jpg"], "message": "Переведи письмо на английский",
+         "expect_action": "translate", "expect_any": ["container"], "expect_any_2": ["TGHU 482915"]},
+        {"message": "Напиши ответ на это письмо: мы согласны провести повторную проверку груза 24 октября",
+         "expect_action": "write", "expect_any": ["24 октября", "24.10"], "expect_any_2": ["провер"]}
+      ]
+    },
+    {
+      "name": "Личные инструкции: подпись и стиль",
+      "instructions": "Я — Петрова Анна Сергеевна, начальник отдела логистики ООО «Вектор». Письма подписывай от моего имени и должности. Пиши кратко.",
+      "turns": [
+        {"attach": ["pismo_terminal.jpg"], "message": "Подготовь ответ: просим перенести повторную проверку на 27 октября",
+         "expect_action": "write", "expect_any": ["Петрова"], "expect_any_2": ["27 октября", "27.10"], "forbid_any": ["Петрову А. А.", "Кравцова"]}
+      ]
+    },
+    {
+      "name": "Анализ крови",
+      "turns": [
+        {"attach": ["analiz_krovi.jpg"], "message": "Какие показатели вне нормы?",
+         "expect_action": "answer", "expect_any": ["Гемоглобин"], "expect_any_2": ["Лейкоциты"], "expect_any_3": ["СОЭ"]}
+      ]
+    },
+    {
+      "name": "Шильдик насоса",
+      "turns": [
+        {"attach": ["shildik_nasosa.jpg"], "message": "Какая мощность и подача у этого насоса?",
+         "expect_action": "answer", "expect_any": ["7,5", "7.5"], "expect_any_2": ["50"]}
+      ]
+    },
+    {
+      "name": "Скан PDF без текстового слоя",
+      "turns": [
+        {"attach": ["skan_scheta.pdf"], "message": "Какой номер у счёта и до какого числа его оплатить?",
+         "expect_action": "answer", "expect_any": ["318"], "expect_any_2": ["23.10.2026", "23 октября"]}
+      ]
+    },
+    {
+      "name": "Служебная записка DOCX",
+      "turns": [
+        {"attach": ["sluzhebnaya_zapiska.docx"], "message": "Кратко перескажи",
+         "expect_action": "summarize", "expect_any": ["ноутбук"], "expect_any_2": ["01.11.2026", "1 ноября", "30.10.2026", "30 октября"]},
+        {"message": "Сохрани пересказ в Word",
+         "expect_files": [".docx"]},
+        {"message": "Переведи служебную записку на немецкий",
+         "expect_action": "translate", "expect_any": ["Laptop", "Notebook"], "expect_any_2": ["140"]}
+      ]
+    },
+    {
+      "name": "Честность: в файле этого нет",
+      "turns": [
+        {"attach": ["schet_318.jpg"], "message": "Кто подписал этот счёт со стороны покупателя?",
+         "expect_any": ["не указ", "нет ", "отсутств", "не подпис", "нет информации", "не найден"]},
+        {"message": "Какой номер телефона поставщика указан в счёте?",
+         "expect_any": ["не указ", "нет ", "отсутств", "нет информации", "не найден"], "forbid_any": ["+7", "8 (", "8-"]}
+      ]
+    },
+    {
+      "name": "Сравнение редакций договора",
+      "turns": [
+        {"attach": ["dogovor_redakciya_1.docx", "dogovor_redakciya_2.docx"], "message": "Что изменилось во второй редакции договора?",
+         "expect_action": "compare", "expect_any": ["1 350 000", "1350000"], "expect_any_2": ["45"], "expect_any_3": ["0,05", "0.05"],
+         "forbid_any": ["850 000"]},
+        {"message": "Добавилось ли что-то новое про страхование?",
+         "expect_any": ["страх"]}
+      ]
+    },
+    {
+      "name": "Вопросы к библиотеке без файлов",
+      "turns": [
+        {"message": "Какая средняя прочность требуется для бетона класса B30?",
+         "expect_action": "answer", "expect_any": ["39,2", "39.2"]},
+        {"message": "За сколько дней нужно оформить заключение о прочности?",
+         "expect_action": "answer", "expect_any": ["3 рабочих", "трёх рабочих", "трех рабочих", "3 дн"]},
+        {"message": "Кто назначен ответственным за пожарную безопасность?",
+         "expect_action": "answer", "expect_any": ["Ершов"]},
+        {"message": "Сколько стоит датчик давления ДД-10?",
+         "expect_action": "answer", "expect_any": ["7300", "7 300"]}
+      ]
+    },
+    {
+      "name": "Разговор и консоль",
+      "turns": [
+        {"message": "Привет! Что ты умеешь?", "expect_action": "chat"},
+        {"message": "Покажи, сколько свободного места на диске C",
+         "expect_action": "command", "expect_command_any": ["Get-PSDrive", "Get-Volume", "Win32_LogicalDisk", "Get-CimInstance", "Get-WmiObject", "fsutil", "DriveInfo"], "run": true, "expect_output_regex": "(?<![\\d.,])(?:[1-9]\\d*(?:[.,]\\d+)?|0[.,]\\d*[1-9])"},
+        {"message": "Какая версия Windows установлена на этом компьютере?",
+         "expect_action": "command", "expect_command_any": ["Get-CimInstance", "Get-ComputerInfo", "Win32_OperatingSystem", "systeminfo", "Environment", "Get-ItemProperty", "winver"], "run": true, "expect_output_regex": "Windows|10\\.0"},
+        {"message": "Покажи IP-адрес этого компьютера",
+         "expect_action": "command", "expect_command_any": ["Get-NetIPAddress", "ipconfig", "Get-NetIPConfiguration", "Win32_NetworkAdapterConfiguration", "Dns"], "run": true, "expect_output_regex": "\\d+\\.\\d+\\.\\d+\\.\\d+"}
+      ]
+    },
+    {
+      "name": "План одним запросом: проверка фото и заключение",
+      "turns": [
+        {"attach": ["protokol_ispytaniy_betona.jpg"],
+         "message": "Проверь этот протокол по нашим нормативам и сразу оформи заключение о прочности по нашему образцу",
+         "expect_action": "plan", "expect_files": [".docx"], "expect_any": ["34,7"], "expect_any_2": ["Проверка по нормативам"],
+         "forbid_any": ["41,5", "98/26"]},
+        {"message": "Какой класс бетона указан в протоколе?", "expect_action": "answer", "expect_any": ["B25", "В25"]}
+      ]
+    },
+    {
+      "name": "Файлы на компьютере",
+      "turns": [
+        {"message": "Найди у меня положение о командировках", "expect_action": "files",
+         "expect_found_any": ["Положение о командировках"]},
+        {"message": "Приложи к чату договор поставки", "expect_action": "files",
+         "expect_any": ["Договор поставки 47-2025"]},
+        {"message": "Переименуй служебную записку об остановке линии в Записка_остановка_линии", "expect_action": "files",
+         "expect_proposal": true, "expect_any": ["Записка_остановка_линии"]}
+      ]
+    },
+    {
+      "name": "Другие программы: письмо и запуск",
+      "turns": [
+        {"attach": ["sluzhebnaya_zapiska.docx"],
+         "message": "Отправь эту записку начальнику цеха письмом через Outlook",
+         "expect_action": "app", "expect_proposal": true, "expect_any": ["sluzhebnaya_zapiska"], "expect_any_2": ["черновик"]},
+        {"message": "Открой калькулятор", "expect_action": "app", "expect_proposal": true, "expect_any": ["калькулятор", "calc"]}
+      ]
+    },
+    {
+      "name": "Ведомость: оценки по шкале с листа",
+      "turns": [
+        {"attach": ["vedomost_ocenok.jpg"],
+         "message": "Распознай ведомость, посчитай средний балл и оценки по шкале, проверь и исправь ошибки",
+         "expect_action": "grade", "expect_files": [".xlsx"],
+         "expect_any": ["→ 46 → «2»"], "expect_any_2": ["→ 85 → «5»"], "expect_any_3": ["нет данных"],
+         "forbid_any": ["Не удалось"]},
+        {"message": "Какой средний балл у Григорьевой?", "expect_action": "answer", "expect_any": ["87"]}
+      ]
+    },
+    {
+      "name": "Ведомость физкультуры: шкалы упражнений на листе (тест пользователя 1)",
+      "turns": [
+        {"attach": ["vedomost_fizra.jpg"],
+         "message": "На фото рукописная ведомость сдачи нормативов. Переведи её в электронный документ (Excel). Где оценка не проставлена — рассчитай по критериям с листа и проставь. Где оценка поставлена неверно — скажи об этом и исправь. Если данных не хватает — так и скажи.",
+         "expect_action": "grade", "expect_files": [".xlsx"],
+         "expect_any": ["Сидоров: бег 60 м 9,3 → «3»; подтяг. 5 → «3»; прыжок 190 → «3»; (3 + 3 + 3) / 3 = 3 → «3» (на листе «4»)"], "expect_any_2": ["Лебедева: бег 60 м 8,5 → «5»; подтяг. 7 → «4»; прыжок 200 → «4»; (5 + 4 + 4) / 3 = 4,33 → 4 → «4» (на листе «5»)"], "expect_any_4": ["Морозов: бег 60 м 9,8 → «2»"], "expect_any_5": ["Орлова: бег 60 м 8,3 → «5»"], "expect_any_6": ["Петрова: бег 60 м 8,9 → «4»"],
+         "expect_any_3": ["Новиков: нет значения"], "forbid_any": ["Новиков: бег", "Не удалось"]}
+      ]
+    },
+    {
+      "name": "Ведомость физкультуры: проверь по нашим нормативам (тест пользователя 2)",
+      "turns": [
+        {"attach": ["vedomost_fizra.jpg"], "message": "Переведи ведомость в Excel и проверь её по нашим нормативам",
+         "expect_action": "grade", "expect_files": [".xlsx"],
+         "expect_any": ["Сидоров: бег 60 м 9,3 → «3»; подтяг. 5 → «3»; прыжок 190 → «3»; (3 + 3 + 3) / 3 = 3 → «3» (на листе «4»)"], "expect_any_2": ["Лебедева: бег 60 м 8,5 → «5»; подтяг. 7 → «4»; прыжок 200 → «4»; (5 + 4 + 4) / 3 = 4,33 → 4 → «4» (на листе «5»)"], "expect_any_4": ["Морозов: бег 60 м 9,8 → «2»"], "expect_any_5": ["Орлова: бег 60 м 8,3 → «5»"], "expect_any_6": ["Петрова: бег 60 м 8,9 → «4»"],
+         "expect_any_3": ["Новиков: нет значения"], "forbid_any": ["Новиков: бег", "Не удалось"]}
+      ]
+    },
+    {
+      "name": "Ведомость физкультуры без шкал на листе: шкалы из библиотеки",
+      "turns": [
+        {"attach": ["vedomost_fizra_bez_shkal.jpg"], "message": "Проставь недостающие оценки и исправь неверные по нашим нормативам",
+         "expect_action": "grade", "expect_files": [".xlsx"],
+         "expect_any": ["(3 + 3 + 3) / 3 = 3 → «3» (на листе «4»)"], "expect_any_2": ["Нормативы_физкультура"], "expect_any_4": ["Морозов: бег 60 м 9,8 → «2»"],
+         "expect_any_3": ["Новиков: нет значения"], "forbid_any": ["Новиков: бег"]}
+      ]
+    },
+    {
+      "name": "Ведомость: разговор после оценки (почему, поправка, Word, почта)",
+      "turns": [
+        {"attach": ["vedomost_fizra.jpg"], "message": "Проставь недостающие оценки и исправь неверные по критериям с листа",
+         "expect_action": "grade", "expect_files": [".xlsx"], "expect_any": ["Новиков: нет значения"]},
+        {"message": "Почему у Лебедевой 4, а не 5?", "expect_any": ["4,33"], "expect_any_2": ["8,5"], "forbid_any": ["Оценки по шкале."]},
+        {"message": "У Новикова прыжок 205 см, пересчитай", "expect_action": "grade", "expect_files": [".xlsx"],
+         "expect_any": ["Новиков — «Прыжок, см»: 205"], "expect_any_2": ["(4 + 3 + 4) / 3 = 3,67 → 4 → «4» (на листе «3»)"],
+         "forbid_any": ["Новиков: нет значения"]},
+        {"message": "Сохрани это в Word", "expect_files": [".docx"], "forbid_any": ["не нашлось образца"]},
+        {"message": "Отправь ведомость классному руководителю по почте", "expect_action": "app", "expect_proposal": true,
+         "expect_any": ["оценки"]}
+      ]
+    },
+    {
+      "name": "Ведомость в Excel: шкалы на листе и в библиотеке",
+      "turns": [
+        {"attach": ["vedomost_fizra.xlsx"], "message": "Проставь оценки по критериям на листе, неверные исправь",
+         "expect_action": "grade", "expect_files": [".xlsx"],
+         "expect_any": ["(3 + 3 + 3) / 3 = 3 → «3» (на листе «4»)"], "expect_any_2": ["(5 + 4 + 4) / 3 = 4,33 → 4 → «4» (на листе «5»)"],
+         "expect_any_3": ["Новиков: нет значения"]}
+      ]
+    },
+    {
+      "name": "Ведомость в Excel без шкал: проверка по нормативам библиотеки",
+      "turns": [
+        {"attach": ["vedomost_fizra_bez_shkal.xlsx"], "message": "Проверь оценки по нашим нормативам",
+         "expect_action": "grade", "expect_files": [".xlsx"],
+         "expect_any": ["(3 + 3 + 3) / 3 = 3 → «3» (на листе «4»)"], "expect_any_2": ["Нормативы_физкультура"],
+         "expect_any_3": ["Новиков: нет значения"]}
+      ]
+    },
+    {
+      "name": "Экзамен: шкала в сообщении, оценки словами",
+      "turns": [
+        {"attach": ["ekzamen_himiya.jpg"],
+         "message": "Проверь оценки по шкале: 90 баллов и выше — отл., 75–89 — хор., 60–74 — удовл., ниже 60 — неуд.",
+         "expect_action": "grade", "expect_files": [".xlsx"],
+         "expect_any": ["Гусев П.: 58 → «неуд"], "expect_any_2": ["Демина О.: 74 → «удовл"], "expect_any_3": ["Ершов В.: нет значения"],
+         "expect_any_4": ["Жданова К.: 90 → «отл"], "forbid_any": ["Белов А.: 93", "Волкова Н.: 81"]}
+      ]
+    },
+    {
+      "name": "Бег 1000 м: время вместо баллов, неявка",
+      "turns": [
+        {"attach": ["beg_1000.jpg"], "message": "Выставь оценки по шкале с листа и проверь уже поставленные",
+         "expect_action": "grade", "expect_files": [".xlsx"],
+         "expect_any": ["Быкова: 3:50 → «4» (на листе «5»)"], "expect_any_2": ["Власов: 4:35 → «2»"],
+         "expect_any_3": ["записано «н/я»"], "expect_any_4": ["Дорохов: 3:51 → «3»"]}
+      ]
+    },
+    {
+      "name": "Ведомость: только перевести в Excel (оценки не трогать)",
+      "turns": [
+        {"attach": ["vedomost_fizra.jpg"], "message": "Переведи ведомость в Excel",
+         "expect_action": "transcribe", "expect_files": [".xlsx"], "forbid_any": ["Оценки по шкале", "исправлена"]}
+      ]
+    },
+    {
+      "name": "Настоящее фото: рукописная ведомость снята боком",
+      "turns": [
+        {"attach": ["vedomost_bokom.jpg"], "message": "Переведи ведомость в Excel",
+         "expect_action": "transcribe", "expect_files": [".xlsx"],
+         "expect_any": ["Федоров"], "expect_any_2": ["Захаров А"], "expect_any_3": ["| 15,4 | 44,38 | 151 |"],
+         "expect_any_4": ["| 20,5 | 52,48 | 159 |"], "expect_any_5": ["| 18,4 | 50,81 |"], "expect_any_6": ["| 15,1 | 66,"],
+         "forbid_any": ["38006", "32,164"]}
+      ]
+    },
+    {
+      "name": "Ведомость: фото без сообщения",
+      "turns": [
+        {"attach": ["vedomost_fizra.jpg"], "message": "", "expect_action": "inspect", "expect_any": ["ведомост", "норматив"]}
+      ]
+    },
+    {
+      "name": "Презентация: по приложенному отчёту",
+      "turns": [
+        {"attach": ["otchet_sklad_oktyabr.docx"], "message": "Сделай презентацию по этому отчёту",
+         "expect_action": "make_document", "expect_files": [".pptx"], "expect_slides_min": 3,
+         "expect_file_text_any": ["1 240", "1240"], "forbid_any": ["980"]}
+      ]
+    },
+    {
+      "name": "Презентация: по образцу из библиотеки",
+      "turns": [
+        {"attach": ["otchet_sklad_oktyabr.docx"], "message": "Подготовь по отчёту презентацию по образцу нашей презентации об итогах месяца",
+         "expect_action": "make_document", "expect_files": [".pptx"], "expect_pptx_background": "1F3A5F",
+         "expect_file_text_any": ["1 240", "1240"], "forbid_any": ["980", "2,4 дня"]}
+      ]
+    },
+    {
+      "name": "Презентация: по приложенному образцу",
+      "turns": [
+        {"attach": ["otchet_sklad_oktyabr.docx", "obrazec_prezentacii.pptx"], "message": "Оформи отчёт в презентацию как в приложенном образце",
+         "expect_action": "make_document", "expect_files": [".pptx"], "expect_pptx_background": "5B2333",
+         "expect_file_text_any": ["1 240", "1240"], "forbid_any": ["Показатель 1"]}
+      ]
+    },
+    {
+      "name": "Презентация: из предыдущего ответа",
+      "turns": [
+        {"attach": ["dogovor_redakciya_1.docx"], "message": "Кратко перескажи договор", "expect_action": "summarize"},
+        {"message": "Сделай из этого презентацию на несколько слайдов",
+         "expect_files": [".pptx"], "expect_slides_min": 3, "expect_file_text_any": ["1 200 000", "1200000"]}
+      ]
+    },
+    {
+      "name": "Презентация: вопрос о приложенной",
+      "turns": [
+        {"attach": ["obrazec_prezentacii.pptx"], "message": "Сколько слайдов в этой презентации и о чём они?",
+         "expect_action": "answer", "expect_no_files": true, "expect_any": ["4", "четыре"]}
+      ]
+    },
+    {
+      "name": "Методичка по образцу и нормам библиотеки",
+      "turns": [
+        {"message": "Напиши методические рекомендации по проведению инструктажа по охране труда для новых работников цеха № 3",
+         "expect_action": "compose", "expect_files": [".docx"], "expect_file_text_any": ["очк", "перчат"],
+         "expect_any": ["Общие положения", "Порядок проведения", "Контроль"], "forbid_any": ["[E1]", "LLM", "RAG"]}
+      ]
+    },
+    {
+      "name": "План-конспект урока",
+      "turns": [
+        {"message": "Составь план-конспект урока физкультуры для 9 класса на 40 минут, тема — прыжок в длину с места",
+         "expect_action": "compose", "expect_files": [".docx"], "expect_any": ["Итого:** 40 мин"], "expect_any_2": ["прыж"]}
+      ]
+    },
+    {
+      "name": "Расписание уроков двух классов",
+      "turns": [
+        {"message": "Составь расписание на 5 дней по 3 урока для 7А и 7Б. 7А: математика 4 раза (Иванова), русский 3 раза (Петрова), физкультура 2 раза (Сидоров). 7Б: математика 4 раза (Иванова), история 2 раза (Козлов), русский 3 раза (Петрова)",
+         "expect_action": "schedule", "expect_files": [".xlsx"], "expect_any": ["7А"], "expect_any_2": ["7Б"],
+         "forbid_any": ["Не поместились"]}
+      ]
+    },
+    {
+      "name": "График дежурств",
+      "turns": [
+        {"message": "Составь график дежурств с 02.11.2026 по 15.11.2026: Иванов, Петров, Сидоров, Козлова — по одному в день, в выходные не дежурим",
+         "expect_action": "schedule", "expect_files": [".xlsx"], "expect_any": ["02.11.2026"], "forbid_any": ["07.11.2026", "08.11.2026"]}
+      ]
+    },
+    {
+      "name": "Инструкция по положению из библиотеки",
+      "turns": [
+        {"message": "Разработай инструкцию для сотрудников по оплате счетов за канцелярские товары",
+         "expect_action": "compose", "expect_files": [".docx"], "expect_file_text_any": ["30 000"], "forbid_any": ["[E1]"]}
+      ]
+    },
+    {
+      "name": "Программа обучения из служебной записки",
+      "turns": [
+        {"attach": ["sluzhebnaya_zapiska.docx"], "message": "Подготовь программу обучения для новых сотрудников отдела продаж на первую неделю",
+         "expect_action": "compose", "expect_files": [".docx"], "expect_any": ["1.", "2."], "forbid_any": ["[E1]"]}
+      ]
+    },
+    {
+      "name": "Память: знакомство",
+      "turns": [
+        {"message": "Запомни: я Петрова Анна Сергеевна, инженер ПТО ООО «СтройЛаб». Письма подписывай от моего имени.",
+         "remember": true, "expect_action": "chat", "forbid_any": ["не найден"]}
+      ]
+    },
+    {
+      "name": "Память: новый чат помнит",
+      "keep_memory": true,
+      "turns": [
+        {"message": "Напиши короткое письмо подрядчику о переносе приёмки работ на пятницу",
+         "expect_action": "write", "expect_any": ["Петрова"]}
+      ]
+    }
+  ]
+}

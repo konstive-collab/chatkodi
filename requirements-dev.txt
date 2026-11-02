@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest==8.4.2
+
+# Build real PDF fixtures for document workflow regression tests.
+reportlab==4.4.3

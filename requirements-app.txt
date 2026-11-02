@@ -1,0 +1,22 @@
+PyQt5==5.15.11
+PyPDF2==3.0.1
+python-docx==1.2.0
+numpy==1.26.4
+rank-bm25==0.2.2
+huggingface-hub==0.36.0
+psutil==7.2.1
+python-dateutil==2.9.0.post0
+pymorphy3==2.0.6
+# Расширенное чтение популярных форматов документов.
+beautifulsoup4==4.14.3
+striprtf==0.0.32
+openpyxl==3.1.5
+xlrd==2.0.2
+python-pptx==1.0.2
+odfpy==1.4.1
+# Assistant: photos for the vision model, scanned PDF pages
+pillow==13.0.0
+pypdfium2==5.14.0
+
+# Preserve table geometry and page references in large normative PDFs.
+pdfplumber==0.11.7
