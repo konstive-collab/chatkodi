@@ -1,3 +1,9 @@
 chatkodi_config.json export-ignore
 docs/*.docx export-ignore
 
+
+# Keep Windows script bytes intact in GitHub ZIP downloads as well as checkouts.
+# cmd.exe needs CRLF; Windows PowerShell 5.1 needs a BOM for UTF-8 Cyrillic.
+*.bat -text
+*.cmd -text
+*.ps1 -text

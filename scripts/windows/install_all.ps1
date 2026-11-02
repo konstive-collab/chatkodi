@@ -1,4 +1,4 @@
-<#
+﻿<#
 ChatKodi 1.9 — полная базовая установка Windows.
 Запуск из корня проекта:
   powershell -ExecutionPolicy Bypass -File scripts\windows\install_all.ps1

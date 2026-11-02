@@ -43,3 +43,17 @@ PYTHONPATH=/workspace/chatkodi-deps:/workspace/chatkodi-pdf-deps python -m pytes
 Для обычной среды разработки установите requirements-dev.txt; reportlab добавлен только для создания тестовых PDF. Новый рабочий пакет pdfplumber добавлен в requirements-app.txt и pyproject.toml.
 
 Из предыдущего расширенного запуска: tests/test_agent.py::test_command_checks требует powershell.exe и не проходит в этой Linux-среде. Модуль проверки PowerShell не изменён.
+
+## Исправление запуска из GitHub ZIP
+
+Windows-скрипты теперь сохраняются с CRLF непосредственно в Git, чтобы GitHub ZIP не выдавал BAT-файлы с LF. Сообщения основных BAT-установщиков переведены в ASCII; PowerShell-скрипты имеют UTF-8 BOM для Windows PowerShell 5.1. При ошибках вида «Установка / onPolicy / atKodi] is not recognized» скачайте обновлённый ZIP и распакуйте заново. Исправление формата проверено также в Git-архиве; выполнение Windows-скриптов в Linux не проверялось.
+
+Обход BAT-установщика из PowerShell в корне проекта (нужен установленный Python 3.11):
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-launcher.txt
+.\.venv\Scripts\python.exe launcher.py
+```
+
+После открытия лаунчера нажмите «Подготовить и запустить».

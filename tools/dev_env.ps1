@@ -1,4 +1,4 @@
-# Python environment for running ChatKodi from the sources (tests, evals).
+﻿# Python environment for running ChatKodi from the sources (tests, evals).
 #
 #   powershell -ExecutionPolicy Bypass -File tools\dev_env.ps1 [-Test]
 #

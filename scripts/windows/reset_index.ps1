@@ -1,4 +1,4 @@
-$Root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+﻿$Root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $Root
 $Runtime = Join-Path $Root ".chatkodi"
 $targets = @("events.db", "events_meta.json", "documents_index.json", "embedding_cache.npz", "embedding_cache_meta.json", "faiss_index.bin", "faiss_meta.pkl")
